@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>JOELNA 利益判定</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f4f6;font-family:system-ui,-apple-system,sans-serif;color:#111}
+main{max-width:600px;margin:auto;padding:16px}.card{background:#fff;padding:15px;border-radius:16px;margin:12px 0;box-shadow:0 2px 10px #0000000d}
+h1{font-size:23px;margin:8px 0 14px}button{width:100%;padding:17px;border:0;border-radius:14px;background:#111;color:#fff;font-size:18px;font-weight:800}
+button:disabled{opacity:.55}.cam{position:relative;aspect-ratio:3/4;background:#111;border-radius:14px;overflow:hidden;margin-top:12px}
+video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;right:7%;top:39%;height:19%;border:3px solid #fff;border-radius:10px;box-shadow:0 0 0 999px #0005}
+.big{font-size:23px;font-weight:800}.hold{font-size:18px;font-weight:800;color:#985000}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.m{padding:11px;background:#f4f4f5;border-radius:11px;font-size:13px}.m b{display:block;font-size:18px;margin-top:4px}.small{font-size:13px;color:#666;line-height:1.5}
+</style>
+</head>
+<body>
+<main>
+<h1>JOELNA 利益判定</h1>
+<section class="card">
+<button id="start">商品スキャン開始</button>
+<div id="cam" class="cam" hidden><video id="video" playsinline muted></video><div class="guide"></div></div>
+<p id="status"><b>待機中</b></p>
+<div id="jan" class="big">JAN —</div>
+<p class="small">撮影・保存せず、カメラ映像からバーコードを連続読取します。</p>
+</section>
+<section class="card">
+<div id="name"><b>商品：</b>未特定</div>
+<p class="hold">データ不足・仕入保留</p>
+<div class="grid">
+<div class="m">月間売れ数<b>取得不能</b></div>
+<div class="m">Shopee SG相場<b>取得待ち</b></div>
+<div class="m">1個純利益<b>—</b></div>
+<div class="m">利益率<b>—</b></div>
+</div>
+<p class="small">月間売れ数は実データ取得時のみ表示します。類似商品の数字や推測値は使いません。</p>
+</section>
+</main>
+<script type="module">
+import {BrowserMultiFormatReader} from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
+const $=id=>document.getElementById(id);
+const known={
+ "4582723680012":"MISSHA Glow UV Tone-Up Primer 30ml",
+ "4570005524703":"Morii うるストキープミスト 35mL"
+};
+$("start").onclick=async()=>{
+ try{
+  $("status").innerHTML="<b>読取中…バーコードを枠内へ</b>";
+  $("cam").hidden=false;$("start").disabled=true;
+  const reader=new BrowserMultiFormatReader();
+  await reader.decodeFromConstraints({audio:false,video:{facingMode:{ideal:"environment"}}},$("video"),(result,error,controls)=>{
+   if(!result)return;
+   const code=result.getText();
+   $("jan").textContent="JAN "+code;
+   $("name").innerHTML="<b>商品：</b>"+(known[code]||"JAN読取済み・商品データ接続待ち");
+   $("status").innerHTML="<b>読取完了</b>";
+   if(navigator.vibrate)navigator.vibrate(120);
+   controls.stop();$("cam").hidden=true;$("start").disabled=false;
+  });
+ }catch(e){
+  $("status").innerHTML="<b>カメラを起動できません。Chromeのカメラ許可を確認してください。</b>";
+  $("cam").hidden=true;$("start").disabled=false;
+ }
+};
+</script>
+</body>
+</html>
