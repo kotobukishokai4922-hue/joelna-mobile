@@ -72,7 +72,16 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  const products = Array.isArray(data?.products) ? data.products : [];
+  if (data && typeof data.code === "number" && data.code !== 0) {
+    return res.status(502).json({
+      error: "NEXSCOPE_BUSINESS_ERROR",
+      code: data.code,
+      msg: data.msg || null
+    });
+  }
+
+  const resultData = data && data.data && typeof data.data === "object" ? data.data : data;
+  const products = Array.isArray(resultData?.products) ? resultData.products : [];
   const sgProducts = products.filter((p) => {
     try {
       const u = new URL(String(p.productUrl || ""));
@@ -89,6 +98,7 @@ module.exports = async function handler(req, res) {
     const sold = Number(p.sold);
     const historicalSold = Number(p.historicalSold);
     return {
+      title: String(p.title || ""),
       productUrl: String(p.productUrl || ""),
       price: bestPrice,
       sold30d: Number.isInteger(sold) && sold >= 0 ? sold : null,
@@ -103,6 +113,8 @@ module.exports = async function handler(req, res) {
       jan,
       matchBasis: "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE",
       matchCount: 0,
+      searchedTitlePhrase: jan,
+      apiProductCount: products.length,
       price: null,
       sold30d: null,
       historicalSold: null,
@@ -117,6 +129,9 @@ module.exports = async function handler(req, res) {
     jan,
     matchBasis: "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE",
     matchCount: sgProducts.length,
+    searchedTitlePhrase: jan,
+    apiProductCount: products.length,
+    title: cheapest.title,
     price: cheapest.price,
     sold30d: cheapest.sold30d,
     historicalSold: cheapest.historicalSold,
