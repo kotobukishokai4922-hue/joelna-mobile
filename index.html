@@ -63,7 +63,7 @@ video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;r
 <script type="module">
 import {BrowserMultiFormatReader} from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
 const $=id=>document.getElementById(id);
-const PRODUCT_API_URL = "https://joelna-yahoo-proxy.REPLACE.workers.dev";
+const PRODUCT_API_URL = localStorage.getItem("joelnaProductApi") || "";
 let YAHOO_APP_ID = localStorage.getItem("joelnaYahooAppId") || "";
 const YAHOO_ITEM_SEARCH = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch";
 const DEFAULT_DOMESTIC_SHIPPING = 800;
@@ -73,12 +73,12 @@ async function fetchProductByJan(code){
  if(!validJan(code)) throw new Error("INVALID_JAN");
  // Exact JAN only. Production path uses the server-side proxy.
  if(PRODUCT_API_URL){
-  const url=new URL(PRODUCT_API_URL,location.href);url.searchParams.set("jan",code);
+  if(!YAHOO_APP_ID) throw new Error("YAHOO_CLIENT_ID_NOT_SET");\n  const url=new URL(PRODUCT_API_URL,location.href);url.searchParams.set("jan",code);url.searchParams.set("appid",YAHOO_APP_ID);
   const res=await fetch(url,{headers:{"Accept":"application/json"}});
   if(!res.ok) throw new Error("PRODUCT_API_"+res.status);
   const data=await res.json();
   if(String(data.jan||"")!==code) throw new Error("JAN_MISMATCH");
-  if(data.inStock!==undefined && typeof data.inStock!=="boolean") throw new Error("INVALID_STOCK");
+  if(data.inStock!==undefined && data.inStock!==null && typeof data.inStock!=="boolean") throw new Error("INVALID_STOCK");
   return data.name?data:null;
  }
  if(!YAHOO_APP_ID) throw new Error("BACKEND_NOT_CONFIGURED");
