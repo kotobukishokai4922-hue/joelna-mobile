@@ -34,6 +34,7 @@ function resetProductView() {
   $("shopeeSold30d").textContent = "取得不能";
   $("shopeeLink").hidden = true;
   $("shopeeLink").removeAttribute("href");
+  $("shopeeDiagnostics").textContent = "";
   $("imageMatch").hidden = true;
   $("imageMatchStatus").hidden = true;
   $("imageMatchStatus").textContent = "YahooのJAN完全一致商品画像を使い、Nexscopeの画像検索→Shopee SG候補検索を行います。画像由来の候補であり、JAN一致の確定ではありません。";
@@ -117,6 +118,10 @@ async function showShopee(code, productName = "") {
   try {
     const data = await fetchShopeeByJan(code, productName);
 
+    const d = data.diagnostics || {};
+    $("shopeeDiagnostics").textContent =
+      `Nexscope Search返却 ${Number(d.searchReturnedProducts || 0)}件 / 検証済掲載一致 ${d.exactListingMatched ? "あり" : "なし"} / soldフィールド ${d.soldFieldPresent ? "あり" : "なし"}`;
+
     if (!data.matchCount) {
       const exactVerified = data.matchBasis === "VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE";
       const byName = data.matchBasis === "YAHOO_TITLE_MULTIWORD_AND";
@@ -172,6 +177,7 @@ async function showShopee(code, productName = "") {
     $("shopeePrice").textContent = "取得不能";
     $("shopeeSold30d").textContent = "取得不能";
     $("shopeeEvidence").textContent = `Shopee SG取得エラー: ${codeName}`;
+    $("shopeeDiagnostics").textContent = "Nexscopeの実レスポンスを取得できなかったため、30日販売数は判定していません。";
   }
 }
 
