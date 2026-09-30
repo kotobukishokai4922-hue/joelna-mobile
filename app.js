@@ -4,7 +4,6 @@ const DEFAULT_DOMESTIC_SHIPPING = 800;
 const ZXING_URL = "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
 
 let yahooAppId = localStorage.getItem("joelnaYahooAppId") || "";
-let nexscopeApiKey = localStorage.getItem("joelnaNexscopeApiKey") || "";
 let mediaStream = null;
 let zxingControls = null;
 let nativeLoopTimer = null;
@@ -76,12 +75,10 @@ function cameraErrorMessage(error) {
 
 async function fetchShopeeByJan(code) {
   if (!validJan(code)) throw new Error("INVALID_JAN");
-  if (!nexscopeApiKey) throw new Error("NEXSCOPE_API_KEY_NOT_SET");
-
   const response = await fetch("/api/shopee", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Accept": "application/json" },
-    body: JSON.stringify({ jan: code, apiKey: nexscopeApiKey })
+    body: JSON.stringify({ jan: code })
   });
 
   let data = null;
@@ -99,13 +96,6 @@ async function fetchShopeeByJan(code) {
 async function showShopee(code) {
   $("shopeePrice").textContent = "取得中…";
   $("shopeeSold30d").textContent = "取得中…";
-
-  if (!nexscopeApiKey) {
-    $("shopeePrice").textContent = "API未設定";
-    $("shopeeSold30d").textContent = "API未設定";
-    $("shopeeEvidence").textContent = "Shopee SG実データAPI未設定。推測値は表示しません。";
-    return;
-  }
 
   try {
     const data = await fetchShopeeByJan(code);
@@ -277,7 +267,6 @@ function numericValue(id) {
 function init() {
   $("domestic").value = String(DEFAULT_DOMESTIC_SHIPPING);
   $("yahooAppId").value = yahooAppId;
-  $("nexscopeApiKey").value = nexscopeApiKey;
   if (yahooAppId) {
     $("apiStatus").textContent = "Yahoo Client IDはこの端末に保存済みです。";
   } else {
@@ -297,20 +286,6 @@ function init() {
     setStatus("Yahoo Client ID保存完了。スキャンできます。");
   });
 
-  $("saveNexscope").addEventListener("click", () => {
-    const value = $("nexscopeApiKey").value.trim();
-    if (!value) {
-      $("nexscopeStatus").textContent = "Nexscope API Keyを入力してください。";
-      return;
-    }
-    localStorage.setItem("joelnaNexscopeApiKey", value);
-    nexscopeApiKey = value;
-    $("nexscopeStatus").textContent = "保存完了。Shopee SGの実データ取得を利用できます。";
-  });
-
-  if (nexscopeApiKey) {
-    $("nexscopeStatus").textContent = "Nexscope API Keyはこの端末に保存済みです。";
-  }
 
   $("lookup").addEventListener("click", async () => {
     const code = $("manualJan").value.trim();
