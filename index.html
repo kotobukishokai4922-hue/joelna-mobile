@@ -38,6 +38,17 @@ video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;r
 <div class="m">利益率<b>—</b></div>
 </div>
 <p class="small">月間売れ数は実データ取得時のみ表示します。類似商品の数字や推測値は使いません。</p>
+<details><summary>利益計算入力</summary>
+<div class="grid" style="margin-top:10px">
+<label class="m">仕入(税込)<input id="cost" inputmode="decimal" placeholder="円" style="width:100%"></label>
+<label class="m">SG販売価格<input id="sellSgd" inputmode="decimal" placeholder="S$" style="width:100%"></label>
+<label class="m">為替<input id="fx" inputmode="decimal" placeholder="円/SGD" style="width:100%"></label>
+<label class="m">国内送料<input id="domestic" inputmode="decimal" value="800" style="width:100%"></label>
+<label class="m">SLS負担<input id="sls" inputmode="decimal" placeholder="円" style="width:100%"></label>
+<label class="m">手数料率<input id="feeRate" inputmode="decimal" placeholder="%" style="width:100%"></label>
+</div>
+<button id="calc" style="margin-top:10px">実入力で利益計算</button>
+</details>
 </section>
 </main>
 <script type="module">
@@ -66,6 +77,15 @@ async function showProduct(code){
   $("status").innerHTML="<b>JAN・商品情報取得完了</b>";
  }catch(e){console.error(e);$("name").innerHTML="<b>商品：</b>取得不能";$("status").innerHTML="<b>JAN読取完了・商品情報取得エラー</b>"}
 }
+function num(id){const v=$(id).value.trim();return v===""?null:Number(v)}
+$("calc").onclick=()=>{
+ const vals=["cost","sellSgd","fx","domestic","sls","feeRate"].map(num);
+ if(vals.some(v=>v===null||!Number.isFinite(v)||v<0)){ $("profit").textContent="取得不能"; $("margin").textContent="取得不能"; return; }
+ const [cost,sellSgd,fx,domestic,sls,feeRate]=vals;
+ const sales=sellSgd*fx, fees=sales*(feeRate/100), profit=sales-cost-domestic-sls-fees;
+ $("profit").textContent="¥"+Math.round(profit).toLocaleString("ja-JP");
+ $("margin").textContent=sales>0?(profit/sales*100).toFixed(1)+"%":"取得不能";
+};
 $("lookup").onclick=()=>{
  const code=$("manualJan").value.trim();
  $("jan").textContent="JAN "+code;
