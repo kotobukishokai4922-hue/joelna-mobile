@@ -40,7 +40,7 @@ module.exports = async function handler(req, res) {
     .trim();
 
   const useProductName = productKeyword.length > 0;
-  const payload = verified ? {
+  let payload = verified ? {
     station: "SG",
     pids: verified.pid,
     orderBy: "price",
@@ -127,6 +127,17 @@ module.exports = async function handler(req, res) {
         : detailCall.body;
       verifiedDetail = detailData?.product || null;
     }
+
+    if (verifiedDetail?.name) {
+      payload = {
+        station: "SG",
+        keyword: String(verifiedDetail.name).trim(),
+        keywordType: 1,
+        shopIdList: String(verifiedDetail.shopId || verified.shopId),
+        page: 1,
+        pageSize: 100
+      };
+    }
   }
 
   const searchCall = await callNexscope("shopee-product-search", payload);
@@ -166,7 +177,15 @@ module.exports = async function handler(req, res) {
     } catch {
       return false;
     }
-  }).filter((p) => !verified || String(p.pid || "") === verified.pid).map((p) => {
+  }).filter((p) => {
+    if (!verified) return true;
+    const productUrl = String(p.productUrl || "");
+    const shopId = String(verifiedDetail?.shopId || verified.shopId);
+    const itemId = String(verifiedDetail?.itemId || verified.pid);
+    const exactUrlSuffix = `-i.${shopId}.${itemId}`;
+    return productUrl.includes(exactUrlSuffix) ||
+      (String(p.shopId || "") === shopId && String(p.title || "").trim() === String(verifiedDetail?.name || "").trim());
+  }).map((p) => {
     const minPrice = Number(p.minPrice);
     const price = Number(p.price);
     const bestPrice = Number.isFinite(minPrice) && minPrice >= 0
@@ -233,7 +252,7 @@ module.exports = async function handler(req, res) {
     exactJanVerified: Boolean(verified),
     verifiedProductUrl: verified?.productUrl || "",
     matchCount: sgProducts.length,
-    searchedTitlePhrase: verified ? verified.pid : (useProductName ? productKeyword : jan),
+    searchedTitlePhrase: verified ? String(verifiedDetail?.name || verified.pid) : (useProductName ? productKeyword : jan),
     apiProductCount: products.length,
     title: cheapest.title,
     price: cheapest.price,
