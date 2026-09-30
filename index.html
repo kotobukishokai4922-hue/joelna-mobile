@@ -67,7 +67,7 @@ const PRODUCT_API_URL = localStorage.getItem("joelnaProductApi") || "";
 let YAHOO_APP_ID = localStorage.getItem("joelnaYahooAppId") || "";
 const YAHOO_ITEM_SEARCH = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch";
 const DEFAULT_DOMESTIC_SHIPPING = 800;
-function validJan(code){return /^\\d{13}$/.test(code)}
+function validJan(code){return /^\d{13}$/.test(code)}
 function escapeHtml(v){const d=document.createElement("div");d.textContent=String(v);return d.innerHTML}
 async function fetchProductByJan(code){
  if(!validJan(code)) throw new Error("INVALID_JAN");
