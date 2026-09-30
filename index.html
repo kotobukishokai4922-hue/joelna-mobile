@@ -26,7 +26,7 @@ video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;r
 <input id="manualJan" inputmode="numeric" maxlength="13" placeholder="JANを手入力" style="padding:13px;border:1px solid #ccc;border-radius:12px;font-size:16px">
 <button id="lookup" >検索</button>
 </div>
-<details style="margin-top:10px"><summary>Yahoo API設定</summary>
+<details id="legacyYahoo" style="margin-top:10px" hidden><summary>Yahoo API設定</summary>
 <div class="row">
 <input id="yahooAppId" type="password" autocomplete="off" placeholder="Client IDを貼り付け" style="padding:13px;border:1px solid #ccc;border-radius:12px;font-size:16px">
 <button id="saveYahoo" >保存</button>
@@ -63,7 +63,7 @@ video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;r
 <script type="module">
 import {BrowserMultiFormatReader} from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
 const $=id=>document.getElementById(id);
-const PRODUCT_API_URL = localStorage.getItem("joelnaProductApi") || "";
+const PRODUCT_API_URL = "https://joelna-yahoo-proxy.REPLACE.workers.dev";
 let YAHOO_APP_ID = localStorage.getItem("joelnaYahooAppId") || "";
 const YAHOO_ITEM_SEARCH = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch";
 const DEFAULT_DOMESTIC_SHIPPING = 800;
@@ -71,7 +71,7 @@ function validJan(code){return /^\d{13}$/.test(code)}
 function escapeHtml(v){const d=document.createElement("div");d.textContent=String(v);return d.innerHTML}
 async function fetchProductByJan(code){
  if(!validJan(code)) throw new Error("INVALID_JAN");
- // Exact JAN only. Prefer a private backend when configured; otherwise use Yahoo Shopping itemSearch.
+ // Exact JAN only. Production path uses the server-side proxy.
  if(PRODUCT_API_URL){
   const url=new URL(PRODUCT_API_URL,location.href);url.searchParams.set("jan",code);
   const res=await fetch(url,{headers:{"Accept":"application/json"}});
@@ -81,7 +81,7 @@ async function fetchProductByJan(code){
   if(data.inStock!==undefined && typeof data.inStock!=="boolean") throw new Error("INVALID_STOCK");
   return data.name?data:null;
  }
- if(!YAHOO_APP_ID) throw new Error("YAHOO_CLIENT_ID_NOT_SET");
+ if(!YAHOO_APP_ID) throw new Error("BACKEND_NOT_CONFIGURED");
  const url=new URL(YAHOO_ITEM_SEARCH);
  url.searchParams.set("appid",YAHOO_APP_ID);
  url.searchParams.set("jan_code",code);
