@@ -26,6 +26,13 @@ video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;r
 <input id="manualJan" inputmode="numeric" maxlength="13" placeholder="JANを手入力" style="flex:1;padding:13px;border:1px solid #ccc;border-radius:12px;font-size:16px">
 <button id="lookup" style="width:auto;padding:13px 16px;font-size:15px">検索</button>
 </div>
+<details style="margin-top:10px"><summary>Yahoo API設定</summary>
+<div style="display:flex;gap:8px;margin-top:8px">
+<input id="yahooAppId" type="password" autocomplete="off" placeholder="Client IDを貼り付け" style="flex:1;padding:13px;border:1px solid #ccc;border-radius:12px;font-size:16px">
+<button id="saveYahoo" style="width:auto;padding:13px 16px;font-size:15px">保存</button>
+</div>
+<p id="apiStatus" class="small">Client IDはこの端末内だけに保存します。GitHubには保存しません。</p>
+</details>
 <p class="small">撮影・保存せず、カメラ映像からバーコードを連続読取します。</p>
 </section>
 <section class="card">
@@ -56,7 +63,7 @@ video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;r
 import {BrowserMultiFormatReader} from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
 const $=id=>document.getElementById(id);
 const PRODUCT_API_URL = localStorage.getItem("joelnaProductApi") || "";
-const YAHOO_APP_ID = localStorage.getItem("joelnaYahooAppId") || "";
+let YAHOO_APP_ID = localStorage.getItem("joelnaYahooAppId") || "";
 const YAHOO_ITEM_SEARCH = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch";
 const DEFAULT_DOMESTIC_SHIPPING = 800;
 function validJan(code){return /^\\d{13}$/.test(code)}
@@ -78,6 +85,7 @@ async function fetchProductByJan(code){
  url.searchParams.set("appid",YAHOO_APP_ID);
  url.searchParams.set("jan_code",code);
  url.searchParams.set("condition","new");
+ url.searchParams.set("results","50");
  url.searchParams.set("sort","+price");
  const res=await fetch(url,{headers:{"Accept":"application/json"}});
  if(!res.ok) throw new Error("YAHOO_API_"+res.status);
@@ -102,6 +110,13 @@ async function showProduct(code){
 }
 function num(id){const v=$(id).value.trim();return v===""?null:Number(v)}
 $("domestic").value=String(DEFAULT_DOMESTIC_SHIPPING);
+$("yahooAppId").value=YAHOO_APP_ID;
+$("saveYahoo").onclick=()=>{
+ const v=$("yahooAppId").value.trim();
+ if(!v){$("apiStatus").textContent="Client IDを入力してください。";return}
+ localStorage.setItem("joelnaYahooAppId",v);YAHOO_APP_ID=v;
+ $("apiStatus").textContent="保存完了。この端末からYahoo商品検索を利用できます。";
+};
 $("calc").onclick=()=>{
  const vals=["cost","sellSgd","fx","domestic","sls","feeRate"].map(num);
  if(vals.some(v=>v===null||!Number.isFinite(v)||v<0)){ $("profit").textContent="取得不能"; $("margin").textContent="取得不能"; return; }
