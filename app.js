@@ -166,6 +166,12 @@ async function scanWithZxing(video) {
 
 async function startCamera() {
   if (scanning) return;
+  if (!yahooAppId) {
+    $("yahooSettings").open = true;
+    setStatus("先にYahoo Client IDを保存してください。");
+    $("yahooAppId").focus();
+    return;
+  }
   try {
     if (!window.isSecureContext) throw new DOMException("HTTPS required", "SecurityError");
     if (!navigator.mediaDevices?.getUserMedia) throw new DOMException("getUserMedia unavailable", "NotSupportedError");
@@ -209,7 +215,12 @@ function numericValue(id) {
 function init() {
   $("domestic").value = String(DEFAULT_DOMESTIC_SHIPPING);
   $("yahooAppId").value = yahooAppId;
-  if (yahooAppId) $("apiStatus").textContent = "Yahoo Client IDはこの端末に保存済みです。";
+  if (yahooAppId) {
+    $("apiStatus").textContent = "Yahoo Client IDはこの端末に保存済みです。";
+  } else {
+    $("yahooSettings").open = true;
+    setStatus("Yahoo Client ID未設定。下のYahoo API設定から保存してください。");
+  }
 
   $("saveYahoo").addEventListener("click", () => {
     const value = $("yahooAppId").value.trim();
@@ -219,7 +230,8 @@ function init() {
     }
     localStorage.setItem("joelnaYahooAppId", value);
     yahooAppId = value;
-    $("apiStatus").textContent = "保存完了。この端末からYahoo商品検索を利用できます。";
+    $("apiStatus").textContent = "保存完了。商品スキャンを利用できます。";
+    setStatus("Yahoo Client ID保存完了。スキャンできます。");
   });
 
   $("lookup").addEventListener("click", async () => {
