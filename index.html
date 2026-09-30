@@ -54,11 +54,13 @@ video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;r
 <script type="module">
 import {BrowserMultiFormatReader} from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
 const $=id=>document.getElementById(id);
-const PRODUCT_API_URL = ""; // Backend: GET ?jan=13digits -> {jan,name}
+const PRODUCT_API_URL = localStorage.getItem("joelnaProductApi") || ""; // Backend: GET ?jan=13digits -> {jan,name,price}
+const DEFAULT_DOMESTIC_SHIPPING = 800;
 function validJan(code){return /^\\d{13}$/.test(code)}
 function escapeHtml(v){const d=document.createElement("div");d.textContent=String(v);return d.innerHTML}
 async function fetchProductByJan(code){
  if(!validJan(code)) throw new Error("INVALID_JAN");
+ // Never fall back to keyword/brand matching: exact JAN only.
  if(!PRODUCT_API_URL) return null;
  const url=new URL(PRODUCT_API_URL,location.href);url.searchParams.set("jan",code);
  const res=await fetch(url,{headers:{"Accept":"application/json"}});
@@ -78,6 +80,7 @@ async function showProduct(code){
  }catch(e){console.error(e);$("name").innerHTML="<b>商品：</b>取得不能";$("status").innerHTML="<b>JAN読取完了・商品情報取得エラー</b>"}
 }
 function num(id){const v=$(id).value.trim();return v===""?null:Number(v)}
+$("domestic").value=String(DEFAULT_DOMESTIC_SHIPPING);
 $("calc").onclick=()=>{
  const vals=["cost","sellSgd","fx","domestic","sls","feeRate"].map(num);
  if(vals.some(v=>v===null||!Number.isFinite(v)||v<0)){ $("profit").textContent="取得不能"; $("margin").textContent="取得不能"; return; }
