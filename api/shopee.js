@@ -57,52 +57,106 @@ module.exports = async function handler(req, res) {
     pageSize: 100
   };
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
-
-  let upstream;
-  try {
-    upstream = await fetch(
-      "https://api.nexscope.ai/api/skill-api/v1/skills/shopee-product-search/run",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      }
-    );
-  } catch (error) {
+  async function callNexscope(slug, payload) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    let upstream;
+    try {
+      upstream = await fetch(
+        `https://api.nexscope.ai/api/skill-api/v1/skills/${slug}/run`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        }
+      );
+    } catch (error) {
+      clearTimeout(timeout);
+      return {
+        ok: false,
+        status: 502,
+        body: { error: error?.name === "AbortError" ? "NEXSCOPE_TIMEOUT" : "NEXSCOPE_NETWORK_ERROR" }
+      };
+    }
     clearTimeout(timeout);
-    return res.status(502).json({
-      error: error?.name === "AbortError" ? "SHOPEE_DATA_TIMEOUT" : "SHOPEE_DATA_NETWORK_ERROR"
-    });
+
+    let body = null;
+    try { body = await upstream.json(); } catch {}
+
+    if (!upstream.ok) {
+      return {
+        ok: false,
+        status: upstream.status === 401 || upstream.status === 402 ? upstream.status : 502,
+        body: {
+          error: upstream.status === 401 ? "NEXSCOPE_AUTH_ERROR"
+            : upstream.status === 402 ? "NEXSCOPE_CREDIT_ERROR"
+            : "NEXSCOPE_HTTP_ERROR",
+          status: upstream.status
+        }
+      };
+    }
+
+    if (body && typeof body.code === "number" && body.code !== 0) {
+      return {
+        ok: false,
+        status: 502,
+        body: {
+          error: "NEXSCOPE_BUSINESS_ERROR",
+          code: body.code,
+          msg: body.msg || null
+        }
+      };
+    }
+
+    return { ok: true, status: 200, body };
   }
-  clearTimeout(timeout);
 
-  let data = null;
-  try { data = await upstream.json(); } catch {}
-
-  if (!upstream.ok) {
-    return res.status(upstream.status === 401 || upstream.status === 402 ? upstream.status : 502).json({
-      error: upstream.status === 401 ? "NEXSCOPE_AUTH_ERROR"
-        : upstream.status === 402 ? "NEXSCOPE_CREDIT_ERROR"
-        : "NEXSCOPE_HTTP_ERROR",
-      status: upstream.status
+  let verifiedDetail = null;
+  if (verified) {
+    const detailCall = await callNexscope("shopee-product-detail", {
+      productUrl: verified.productUrl
     });
+    if (detailCall.ok) {
+      const detailData = detailCall.body && detailCall.body.data && typeof detailCall.body.data === "object"
+        ? detailCall.body.data
+        : detailCall.body;
+      verifiedDetail = detailData?.product || null;
+    }
   }
 
-  if (data && typeof data.code === "number" && data.code !== 0) {
-    return res.status(502).json({
-      error: "NEXSCOPE_BUSINESS_ERROR",
-      code: data.code,
-      msg: data.msg || null
-    });
+  const searchCall = await callNexscope("shopee-product-search", payload);
+  if (!searchCall.ok) {
+    if (verified && verifiedDetail) {
+      const rawPrice = verifiedDetail.price;
+      const detailPrice = Number.isFinite(Number(rawPrice)) ? Number(rawPrice) : null;
+      return res.status(200).json({
+        jan,
+        matchBasis: "VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE",
+        exactJanVerified: true,
+        verifiedProductUrl: verified.productUrl,
+        matchCount: 1,
+        searchedTitlePhrase: verified.pid,
+        apiProductCount: 0,
+        title: String(verifiedDetail.name || ""),
+        price: detailPrice,
+        currency: String(verifiedDetail.currency || "SGD"),
+        sold30d: null,
+        sold30dSource: "UNAVAILABLE",
+        productUrl: verified.productUrl,
+        pid: String(verifiedDetail.itemId || verified.pid),
+        shopId: String(verifiedDetail.shopId || verified.shopId),
+        detailSource: "NEXSCOPE_SHOPEE_PRODUCT_DETAIL"
+      });
+    }
+    return res.status(searchCall.status).json(searchCall.body);
   }
 
+  const data = searchCall.body;
   const resultData = data && data.data && typeof data.data === "object" ? data.data : data;
   const products = Array.isArray(resultData?.products) ? resultData.products : [];
   const sgProducts = products.filter((p) => {
@@ -132,13 +186,36 @@ module.exports = async function handler(req, res) {
   }).filter((p) => p.price !== null);
 
   if (!sgProducts.length) {
+    if (verified && verifiedDetail) {
+      const rawPrice = verifiedDetail.price;
+      const detailPrice = Number.isFinite(Number(rawPrice)) ? Number(rawPrice) : null;
+      return res.status(200).json({
+        jan,
+        matchBasis: "VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE",
+        exactJanVerified: true,
+        verifiedProductUrl: verified.productUrl,
+        matchCount: 1,
+        searchedTitlePhrase: verified.pid,
+        apiProductCount: products.length,
+        title: String(verifiedDetail.name || ""),
+        price: detailPrice,
+        currency: String(verifiedDetail.currency || "SGD"),
+        sold30d: null,
+        sold30dSource: "UNAVAILABLE",
+        historicalSold: null,
+        productUrl: verified.productUrl,
+        pid: String(verifiedDetail.itemId || verified.pid),
+        shopId: String(verifiedDetail.shopId || verified.shopId),
+        detailSource: "NEXSCOPE_SHOPEE_PRODUCT_DETAIL"
+      });
+    }
     return res.status(200).json({
       jan,
-      matchBasis: verified ? "VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE" : (useProductName ? "YAHOO_TITLE_MULTIWORD_AND" : "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE"),
-      exactJanVerified: Boolean(verified),
-      verifiedProductUrl: verified?.productUrl || "",
+      matchBasis: useProductName ? "YAHOO_TITLE_MULTIWORD_AND" : "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE",
+      exactJanVerified: false,
+      verifiedProductUrl: "",
       matchCount: 0,
-      searchedTitlePhrase: verified ? verified.pid : (useProductName ? productKeyword : jan),
+      searchedTitlePhrase: useProductName ? productKeyword : jan,
       apiProductCount: products.length,
       price: null,
       sold30d: null,
@@ -161,6 +238,7 @@ module.exports = async function handler(req, res) {
     title: cheapest.title,
     price: cheapest.price,
     sold30d: cheapest.sold30d,
+    sold30dSource: cheapest.sold30d !== null ? "NEXSCOPE_SHOPEE_PRODUCT_SEARCH_SOLD_30D" : "UNAVAILABLE",
     historicalSold: cheapest.historicalSold,
     productUrl: cheapest.productUrl,
     pid: cheapest.pid,
