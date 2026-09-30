@@ -4,6 +4,7 @@ const DEFAULT_DOMESTIC_SHIPPING = 800;
 const ZXING_URL = "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
 
 let yahooAppId = localStorage.getItem("joelnaYahooAppId") || "";
+let nexscopeApiKey = localStorage.getItem("joelnaNexscopeApiKey") || "";
 let mediaStream = null;
 let zxingControls = null;
 let nativeLoopTimer = null;
@@ -78,7 +79,7 @@ async function fetchShopeeByJan(code) {
   const response = await fetch("/api/shopee", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Accept": "application/json" },
-    body: JSON.stringify({ jan: code })
+    body: JSON.stringify({ jan: code, apiKey: nexscopeApiKey })
   });
 
   let data = null;
@@ -96,6 +97,13 @@ async function fetchShopeeByJan(code) {
 async function showShopee(code) {
   $("shopeePrice").textContent = "取得中…";
   $("shopeeSold30d").textContent = "取得中…";
+
+  if (!nexscopeApiKey) {
+    $("shopeePrice").textContent = "API未設定";
+    $("shopeeSold30d").textContent = "API未設定";
+    $("shopeeEvidence").textContent = "Nexscope API Key未設定。Shopee SGは推測せず未取得のまま表示します。";
+    return;
+  }
 
   try {
     const data = await fetchShopeeByJan(code);
@@ -267,6 +275,7 @@ function numericValue(id) {
 function init() {
   $("domestic").value = String(DEFAULT_DOMESTIC_SHIPPING);
   $("yahooAppId").value = yahooAppId;
+  $("nexscopeApiKey").value = nexscopeApiKey;
   if (yahooAppId) {
     $("apiStatus").textContent = "Yahoo Client IDはこの端末に保存済みです。";
   } else {
@@ -285,6 +294,21 @@ function init() {
     $("apiStatus").textContent = "保存完了。商品スキャンを利用できます。";
     setStatus("Yahoo Client ID保存完了。スキャンできます。");
   });
+
+  $("saveNexscope").addEventListener("click", () => {
+    const value = $("nexscopeApiKey").value.trim();
+    if (!value) {
+      $("nexscopeStatus").textContent = "Nexscope API Keyを入力してください。";
+      return;
+    }
+    localStorage.setItem("joelnaNexscopeApiKey", value);
+    nexscopeApiKey = value;
+    $("nexscopeStatus").textContent = "保存完了。この端末からShopee SG実データを取得できます。";
+  });
+
+  if (nexscopeApiKey) {
+    $("nexscopeStatus").textContent = "Nexscope API Keyはこの端末に保存済みです。";
+  }
 
 
   $("lookup").addEventListener("click", async () => {
