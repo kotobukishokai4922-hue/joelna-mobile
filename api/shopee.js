@@ -174,6 +174,22 @@ module.exports = async function handler(req, res) {
   const data = searchCall.body;
   const resultData = data && data.data && typeof data.data === "object" ? data.data : data;
   const products = Array.isArray(resultData?.products) ? resultData.products : [];
+  const diagnostics = {
+    total: Number.isFinite(Number(resultData?.total)) ? Number(resultData.total) : null,
+    totalSize: Number.isFinite(Number(resultData?.totalSize)) ? Number(resultData.totalSize) : null,
+    productCount: products.length,
+    sample: products.slice(0, 20).map((p) => ({
+      pid: String(p?.pid || ""),
+      shopId: String(p?.shopId || ""),
+      title: String(p?.title || ""),
+      productUrl: String(p?.productUrl || ""),
+      sold: Number.isFinite(Number(p?.sold)) ? Number(p.sold) : null,
+      estimateSold: Number.isFinite(Number(p?.estimateSold)) ? Number(p.estimateSold) : null,
+      historicalSold: Number.isFinite(Number(p?.historicalSold)) ? Number(p.historicalSold) : null,
+      price: Number.isFinite(Number(p?.price)) ? Number(p.price) : null,
+      minPrice: Number.isFinite(Number(p?.minPrice)) ? Number(p.minPrice) : null
+    }))
+  };
   const sgProducts = products.filter((p) => {
     try {
       const u = new URL(String(p.productUrl || ""));
