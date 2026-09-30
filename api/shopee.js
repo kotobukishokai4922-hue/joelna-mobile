@@ -1,0 +1,127 @@
+module.exports = async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+
+  if (req.method === "GET" && String(req.query?.health || "") === "1") {
+    return res.status(200).json({ ok: true, service: "shopee-sg-nexscope" });
+  }
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "METHOD_NOT_ALLOWED" });
+  }
+
+  let body = req.body || {};
+  if (typeof body === "string") {
+    try { body = JSON.parse(body); } catch { body = {}; }
+  }
+
+  const jan = String(body.jan || "").trim();
+  const apiKey = String(body.apiKey || "").trim();
+
+  if (!/^\d{13}$/.test(jan)) {
+    return res.status(400).json({ error: "INVALID_JAN" });
+  }
+  if (!apiKey) {
+    return res.status(400).json({ error: "NEXSCOPE_API_KEY_NOT_SET" });
+  }
+
+  const payload = {
+    station: "SG",
+    keyword: jan,
+    keywordType: 1,
+    orderBy: "price",
+    orderByType: "ASC",
+    page: 1,
+    pageSize: 100
+  };
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+
+  let upstream;
+  try {
+    upstream = await fetch(
+      "https://api.nexscope.ai/api/skill-api/v1/skills/shopee-product-search/run",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      }
+    );
+  } catch (error) {
+    clearTimeout(timeout);
+    return res.status(502).json({
+      error: error?.name === "AbortError" ? "SHOPEE_DATA_TIMEOUT" : "SHOPEE_DATA_NETWORK_ERROR"
+    });
+  }
+  clearTimeout(timeout);
+
+  let data = null;
+  try { data = await upstream.json(); } catch {}
+
+  if (!upstream.ok) {
+    return res.status(upstream.status === 401 || upstream.status === 402 ? upstream.status : 502).json({
+      error: upstream.status === 401 ? "NEXSCOPE_AUTH_ERROR"
+        : upstream.status === 402 ? "NEXSCOPE_CREDIT_ERROR"
+        : "NEXSCOPE_HTTP_ERROR",
+      status: upstream.status
+    });
+  }
+
+  const products = Array.isArray(data?.products) ? data.products : [];
+  const sgProducts = products.filter((p) => {
+    try {
+      const u = new URL(String(p.productUrl || ""));
+      return u.protocol === "https:" && (u.hostname === "shopee.sg" || u.hostname.endsWith(".shopee.sg"));
+    } catch {
+      return false;
+    }
+  }).map((p) => {
+    const minPrice = Number(p.minPrice);
+    const price = Number(p.price);
+    const bestPrice = Number.isFinite(minPrice) && minPrice >= 0
+      ? minPrice
+      : Number.isFinite(price) && price >= 0 ? price : null;
+    const sold = Number(p.sold);
+    const historicalSold = Number(p.historicalSold);
+    return {
+      productUrl: String(p.productUrl || ""),
+      price: bestPrice,
+      sold30d: Number.isInteger(sold) && sold >= 0 ? sold : null,
+      historicalSold: Number.isInteger(historicalSold) && historicalSold >= 0 ? historicalSold : null,
+      pid: String(p.pid || ""),
+      shopId: String(p.shopId || "")
+    };
+  }).filter((p) => p.price !== null);
+
+  if (!sgProducts.length) {
+    return res.status(200).json({
+      jan,
+      matchBasis: "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE",
+      matchCount: 0,
+      price: null,
+      sold30d: null,
+      historicalSold: null,
+      productUrl: ""
+    });
+  }
+
+  sgProducts.sort((a, b) => a.price - b.price);
+  const cheapest = sgProducts[0];
+
+  return res.status(200).json({
+    jan,
+    matchBasis: "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE",
+    matchCount: sgProducts.length,
+    price: cheapest.price,
+    sold30d: cheapest.sold30d,
+    historicalSold: cheapest.historicalSold,
+    productUrl: cheapest.productUrl,
+    pid: cheapest.pid,
+    shopId: cheapest.shopId
+  });
+};
