@@ -63,7 +63,8 @@ video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;r
 <script type="module">
 import {BrowserMultiFormatReader} from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
 const $=id=>document.getElementById(id);
-const PRODUCT_API_URL = localStorage.getItem("joelnaProductApi") || "";
+const IS_GITHUB_PAGES = location.hostname.endsWith("github.io");
+const PRODUCT_API_URL = IS_GITHUB_PAGES ? (localStorage.getItem("joelnaProductApi") || "") : "/api/yahoo";
 let YAHOO_APP_ID = localStorage.getItem("joelnaYahooAppId") || "";
 const YAHOO_ITEM_SEARCH = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch";
 const DEFAULT_DOMESTIC_SHIPPING = 800;
