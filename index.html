@@ -74,7 +74,8 @@ async function fetchProductByJan(code){
  if(!validJan(code)) throw new Error("INVALID_JAN");
  // Exact JAN only. Production path uses the server-side proxy.
  if(PRODUCT_API_URL){
-  if(!YAHOO_APP_ID) throw new Error("YAHOO_CLIENT_ID_NOT_SET");\n  const url=new URL(PRODUCT_API_URL,location.href);url.searchParams.set("jan",code);url.searchParams.set("appid",YAHOO_APP_ID);
+  if(!YAHOO_APP_ID) throw new Error("YAHOO_CLIENT_ID_NOT_SET");
+  const url=new URL(PRODUCT_API_URL,location.href);url.searchParams.set("jan",code);url.searchParams.set("appid",YAHOO_APP_ID);
   const res=await fetch(url,{headers:{"Accept":"application/json"}});
   if(!res.ok) throw new Error("PRODUCT_API_"+res.status);
   const data=await res.json();
