@@ -41,7 +41,8 @@ video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;r
 <div class="grid">
 <div class="m">月間売れ数<b>取得不能</b></div>
 <div class="m">Yahoo!最安<b id="jpPrice">取得不能</b></div>
-<div class="m">国内在庫<b id="jpStock">取得不能</b></div>\n<div class="m">Shopee SG相場<b>取得不能</b></div>
+<div class="m">国内在庫<b id="jpStock">取得不能</b></div>
+<div class="m">Shopee SG相場<b>取得不能</b></div>
 <div class="m">1個純利益<b id="profit">—</b></div>
 <div class="m">利益率<b id="margin">—</b></div>
 </div>
@@ -139,7 +140,8 @@ $("start").onclick=async()=>{
    if(!result)return;
    const code=result.getText();
    $("jan").textContent="JAN "+code;
-   $("status").innerHTML="<b>JAN読取完了</b>";\n   showProduct(code);
+   $("status").innerHTML="<b>JAN読取完了</b>";
+   showProduct(code);
    if(navigator.vibrate)navigator.vibrate(120);
    controls.stop();$("cam").hidden=true;$("start").disabled=false;
   });
