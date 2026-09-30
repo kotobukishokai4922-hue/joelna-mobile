@@ -5,157 +5,93 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>JOELNA 利益判定</title>
 <style>
-*{box-sizing:border-box} body{margin:0;background:#f3f4f6;font-family:system-ui,-apple-system,sans-serif;color:#111}
-main{max-width:600px;margin:auto;padding:16px}.card{background:#fff;padding:15px;border-radius:16px;margin:12px 0;box-shadow:0 2px 10px #0000000d}
-h1{font-size:23px;margin:8px 0 14px}button{width:100%;padding:17px;border:0;border-radius:14px;background:#111;color:#fff;font-size:18px;font-weight:800}
-button:disabled{opacity:.55}.cam{position:relative;aspect-ratio:3/4;background:#111;border-radius:14px;overflow:hidden;margin-top:12px}
-video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;right:7%;top:39%;height:19%;border:3px solid #fff;border-radius:10px;box-shadow:0 0 0 999px #0005}
-.big{font-size:23px;font-weight:800}.hold{font-size:18px;font-weight:800;color:#985000}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.m{padding:11px;background:#f4f4f5;border-radius:11px;font-size:13px}.m b{display:block;font-size:18px;margin-top:4px}.small{font-size:13px;color:#666;line-height:1.5}.row{display:flex;gap:8px;margin-top:10px}.row input{flex:1;min-width:0}.row button{width:auto;flex:0 0 auto;padding:13px 16px;font-size:15px}
+*{box-sizing:border-box}
+body{margin:0;background:#f3f4f6;font-family:system-ui,-apple-system,sans-serif;color:#111}
+main{max-width:600px;margin:auto;padding:16px}
+.card{background:#fff;padding:15px;border-radius:16px;margin:12px 0;box-shadow:0 2px 10px #0000000d}
+h1{font-size:23px;margin:8px 0 14px}
+button{width:100%;padding:17px;border:0;border-radius:14px;background:#111;color:#fff;font-size:18px;font-weight:800}
+button:disabled{opacity:.55}
+.secondary{margin-top:8px;background:#555}
+.cam{position:relative;aspect-ratio:3/4;background:#111;border-radius:14px;overflow:hidden;margin-top:12px}
+video{width:100%;height:100%;object-fit:cover}
+.guide{position:absolute;left:7%;right:7%;top:39%;height:19%;border:3px solid #fff;border-radius:10px;box-shadow:0 0 0 999px #0005}
+.big{font-size:23px;font-weight:800}
+.hold{font-size:18px;font-weight:800;color:#985000}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.m{padding:11px;background:#f4f4f5;border-radius:11px;font-size:13px}
+.m b{display:block;font-size:18px;margin-top:4px}
+.small{font-size:13px;color:#666;line-height:1.5}
+.row{display:flex;gap:8px;margin-top:10px}
+.row input{flex:1;min-width:0;padding:13px;border:1px solid #ccc;border-radius:12px;font-size:16px}
+.row button{width:auto;flex:0 0 auto;padding:13px 16px;font-size:15px}
+label input{margin-top:6px;padding:8px;border:1px solid #ccc;border-radius:8px;font-size:16px}
+.version{text-align:right;font-size:11px;color:#888;margin-top:8px}
 </style>
 </head>
 <body>
 <main>
 <h1>JOELNA 利益判定</h1>
+
 <section class="card">
 <button id="start">商品スキャン開始</button>
-<div id="cam" class="cam" hidden><video id="video" playsinline muted></video><div class="guide"></div></div>
+<button id="stop" class="secondary" hidden>カメラ停止</button>
+<div id="cam" class="cam" hidden>
+  <video id="video" playsinline muted></video>
+  <div class="guide"></div>
+</div>
+
 <p id="status"><b>待機中</b></p>
 <div id="jan" class="big">JAN —</div>
+
 <div class="row">
-<input id="manualJan" inputmode="numeric" maxlength="13" placeholder="JANを手入力" style="padding:13px;border:1px solid #ccc;border-radius:12px;font-size:16px">
-<button id="lookup" >検索</button>
+  <input id="manualJan" inputmode="numeric" maxlength="13" placeholder="JANを手入力">
+  <button id="lookup">検索</button>
 </div>
-<details id="legacyYahoo" style="margin-top:10px"><summary>Yahoo API設定</summary>
-<div class="row">
-<input id="yahooAppId" type="password" autocomplete="off" placeholder="Client IDを貼り付け" style="padding:13px;border:1px solid #ccc;border-radius:12px;font-size:16px">
-<button id="saveYahoo" >保存</button>
-</div>
-<p id="apiStatus" class="small">Client IDはこの端末内だけに保存します。GitHubには保存しません。</p>
+
+<details id="yahooSettings" style="margin-top:10px">
+  <summary>Yahoo API設定</summary>
+  <div class="row">
+    <input id="yahooAppId" type="password" autocomplete="off" placeholder="Client IDを貼り付け">
+    <button id="saveYahoo">保存</button>
+  </div>
+  <p id="apiStatus" class="small">Client IDはこの端末内だけに保存します。</p>
 </details>
-<p class="small">撮影・保存せず、カメラ映像からバーコードを連続読取します。</p>
+
+<p class="small">バーコード画像は保存しません。カメラ映像からJANを読み取ります。</p>
+<div class="version">v2026.10.01.2</div>
 </section>
+
 <section class="card">
 <div id="name"><b>商品：</b>未特定</div>
 <p class="hold">データ不足・仕入保留</p>
+
 <div class="grid">
-<div class="m">月間売れ数<b>取得不能</b></div>
-<div class="m">Yahoo!最安<b id="jpPrice">取得不能</b></div>
-<div class="m">国内在庫<b id="jpStock">取得不能</b></div>
-<div class="m">Shopee SG相場<b>取得不能</b></div>
-<div class="m">1個純利益<b id="profit">—</b></div>
-<div class="m">利益率<b id="margin">—</b></div>
+  <div class="m">月間売れ数<b>取得不能</b></div>
+  <div class="m">Yahoo!最安<b id="jpPrice">取得不能</b></div>
+  <div class="m">国内在庫<b id="jpStock">取得不能</b></div>
+  <div class="m">Shopee SG相場<b>取得不能</b></div>
+  <div class="m">1個純利益<b id="profit">—</b></div>
+  <div class="m">利益率<b id="margin">—</b></div>
 </div>
-<p class="small">月間売れ数は実データ取得時のみ表示します。類似商品の数字や推測値は使いません。</p>
-<details><summary>利益計算入力</summary>
-<div class="grid" style="margin-top:10px">
-<label class="m">仕入(税込)<input id="cost" inputmode="decimal" placeholder="円" style="width:100%"></label>
-<label class="m">SG販売価格<input id="sellSgd" inputmode="decimal" placeholder="S$" style="width:100%"></label>
-<label class="m">為替<input id="fx" inputmode="decimal" placeholder="円/SGD" style="width:100%"></label>
-<label class="m">国内送料<input id="domestic" inputmode="decimal" value="800" style="width:100%"></label>
-<label class="m">SLS負担<input id="sls" inputmode="decimal" placeholder="円" style="width:100%"></label>
-<label class="m">手数料率<input id="feeRate" inputmode="decimal" placeholder="%" style="width:100%"></label>
-</div>
-<button id="calc" style="margin-top:10px">実入力で利益計算</button>
+
+<p class="small">月間売れ数とShopee SG相場は、実データ取得経路が接続されるまで表示しません。推測値は使いません。</p>
+
+<details>
+  <summary>利益計算入力</summary>
+  <div class="grid" style="margin-top:10px">
+    <label class="m">仕入(税込)<input id="cost" inputmode="decimal" placeholder="円" style="width:100%"></label>
+    <label class="m">SG販売価格<input id="sellSgd" inputmode="decimal" placeholder="S$" style="width:100%"></label>
+    <label class="m">為替<input id="fx" inputmode="decimal" placeholder="円/SGD" style="width:100%"></label>
+    <label class="m">国内送料<input id="domestic" inputmode="decimal" value="800" style="width:100%"></label>
+    <label class="m">SLS負担<input id="sls" inputmode="decimal" placeholder="円" style="width:100%"></label>
+    <label class="m">手数料率<input id="feeRate" inputmode="decimal" placeholder="%" style="width:100%"></label>
+  </div>
+  <button id="calc" style="margin-top:10px">実入力で利益計算</button>
 </details>
 </section>
 </main>
-<script type="module">
-import {BrowserMultiFormatReader} from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
-const $=id=>document.getElementById(id);
-const IS_GITHUB_PAGES = location.hostname.endsWith("github.io");
-const PRODUCT_API_URL = IS_GITHUB_PAGES ? (localStorage.getItem("joelnaProductApi") || "") : "/api/yahoo";
-let YAHOO_APP_ID = localStorage.getItem("joelnaYahooAppId") || "";
-const YAHOO_ITEM_SEARCH = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch";
-const DEFAULT_DOMESTIC_SHIPPING = 800;
-function validJan(code){return /^\d{13}$/.test(code)}
-function escapeHtml(v){const d=document.createElement("div");d.textContent=String(v);return d.innerHTML}
-async function fetchProductByJan(code){
- if(!validJan(code)) throw new Error("INVALID_JAN");
- // Exact JAN only. Production path uses the server-side proxy.
- if(PRODUCT_API_URL){
-  if(!YAHOO_APP_ID) throw new Error("YAHOO_CLIENT_ID_NOT_SET");
-  const url=new URL(PRODUCT_API_URL,location.href);url.searchParams.set("jan",code);url.searchParams.set("appid",YAHOO_APP_ID);
-  const res=await fetch(url,{headers:{"Accept":"application/json"}});
-  if(!res.ok) throw new Error("PRODUCT_API_"+res.status);
-  const data=await res.json();
-  if(String(data.jan||"")!==code) throw new Error("JAN_MISMATCH");
-  if(data.inStock!==undefined && data.inStock!==null && typeof data.inStock!=="boolean") throw new Error("INVALID_STOCK");
-  return data.name?data:null;
- }
- if(!YAHOO_APP_ID) throw new Error("BACKEND_NOT_CONFIGURED");
- const url=new URL(YAHOO_ITEM_SEARCH);
- url.searchParams.set("appid",YAHOO_APP_ID);
- url.searchParams.set("jan_code",code);
- url.searchParams.set("condition","new");
- url.searchParams.set("results","50");
- url.searchParams.set("sort","+price");
- const res=await fetch(url,{headers:{"Accept":"application/json"}});
- if(!res.ok) throw new Error("HTTP_"+res.status);
- const data=await res.json();
- const exact=(Array.isArray(data.hits)?data.hits:[]).filter(h=>String(h.janCode||"")===code);
- if(!exact.length) return null;
- const stocked=exact.filter(h=>h.inStock===true);
- const pool=stocked.length?stocked:exact;
- const hit=pool.reduce((a,b)=>Number(b.price)<Number(a.price)?b:a);
- return {jan:code,name:hit.name||"",price:Number.isFinite(Number(hit.price))?Number(hit.price):null,inStock:hit.inStock,source:"Yahoo!ショッピング",url:hit.url||""};
-}
-async function showProduct(code){
- $("name").innerHTML="<b>商品：</b>商品情報を取得中…";
- try{
-  const p=await fetchProductByJan(code);
-  if(!p){$("name").innerHTML="<b>商品：</b>取得不能";$("status").innerHTML="<b>JAN読取完了・商品情報は未接続/取得不能</b>";return}
-  $("name").innerHTML="<b>商品：</b>"+escapeHtml(p.name);
-  $("jpPrice").textContent=p.price!=null ? "¥"+Number(p.price).toLocaleString("ja-JP") : "取得不能";
-  $("jpStock").textContent=p.inStock===true?"在庫あり":p.inStock===false?"在庫なし":"取得不能";
-  $("status").innerHTML="<b>JAN・商品情報取得完了</b>";
- }catch(e){
-  console.error(e);$("name").innerHTML="<b>商品：</b>取得不能";
-  const m=String(e&&e.message||e);
-  $("status").innerHTML="<b>商品情報取得エラー："+escapeHtml(m==="Failed to fetch"?"BROWSER_DIRECT_API_BLOCKED":m)+"</b>";
- }
-}
-function num(id){const v=$(id).value.trim();return v===""?null:Number(v)}
-$("domestic").value=String(DEFAULT_DOMESTIC_SHIPPING);
-$("yahooAppId").value=YAHOO_APP_ID;
-$("saveYahoo").onclick=()=>{
- const v=$("yahooAppId").value.trim();
- if(!v){$("apiStatus").textContent="Client IDを入力してください。";return}
- localStorage.setItem("joelnaYahooAppId",v);YAHOO_APP_ID=v;
- $("apiStatus").textContent="保存完了。この端末からYahoo商品検索を利用できます。";
-};
-$("calc").onclick=()=>{
- const vals=["cost","sellSgd","fx","domestic","sls","feeRate"].map(num);
- if(vals.some(v=>v===null||!Number.isFinite(v)||v<0)){ $("profit").textContent="取得不能"; $("margin").textContent="取得不能"; return; }
- const [cost,sellSgd,fx,domestic,sls,feeRate]=vals;
- const sales=sellSgd*fx, fees=sales*(feeRate/100), profit=sales-cost-domestic-sls-fees;
- $("profit").textContent="¥"+Math.round(profit).toLocaleString("ja-JP");
- $("margin").textContent=sales>0?(profit/sales*100).toFixed(1)+"%":"取得不能";
-};
-$("lookup").onclick=()=>{
- const code=$("manualJan").value.trim();
- $("jan").textContent="JAN "+code;
- showProduct(code);
-};
-$("start").onclick=async()=>{
- try{
-  $("status").innerHTML="<b>読取中…バーコードを枠内へ</b>";
-  $("cam").hidden=false;$("start").disabled=true;
-  const reader=new BrowserMultiFormatReader();
-  await reader.decodeFromConstraints({audio:false,video:{facingMode:{ideal:"environment"}}},$("video"),(result,error,controls)=>{
-   if(!result)return;
-   const code=result.getText();
-   $("jan").textContent="JAN "+code;
-   $("status").innerHTML="<b>JAN読取完了</b>";
-   showProduct(code);
-   if(navigator.vibrate)navigator.vibrate(120);
-   controls.stop();$("cam").hidden=true;$("start").disabled=false;
-  });
- }catch(e){
-  $("status").innerHTML="<b>カメラを起動できません。Chromeのカメラ許可を確認してください。</b>";
-  $("cam").hidden=true;$("start").disabled=false;
- }
-};
-</script>
+
+<script src="/app.js" defer></script>
 </body>
 </html>
