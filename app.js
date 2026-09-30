@@ -90,7 +90,7 @@ async function fetchShopeeByJan(code, productName = "") {
     throw new Error(reason);
   }
   if (!data || String(data.jan || "") !== code) throw new Error("SHOPEE_JAN_MISMATCH");
-  if (!["JAN_EXACT_PHRASE_IN_SHOPEE_TITLE","YAHOO_TITLE_MULTIWORD_AND"].includes(data.matchBasis)) throw new Error("SHOPEE_MATCH_BASIS_INVALID");
+  if (!["JAN_EXACT_PHRASE_IN_SHOPEE_TITLE","YAHOO_TITLE_MULTIWORD_AND","VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE"].includes(data.matchBasis)) throw new Error("SHOPEE_MATCH_BASIS_INVALID");
   return data;
 }
 
@@ -108,20 +108,26 @@ async function showShopee(code, productName = "") {
   try {
     const data = await fetchShopeeByJan(code, productName);
     if (!data.matchCount) {
+      const exactVerified = data.matchBasis === "VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE";
       const byName = data.matchBasis === "YAHOO_TITLE_MULTIWORD_AND";
-      $("shopeePrice").textContent = byName ? "商品名一致なし" : "JANタイトル一致なし";
-      $("shopeeSold30d").textContent = byName ? "商品名一致なし" : "JANタイトル一致なし";
-      $("shopeeEvidence").textContent = byName
-        ? `Shopee SGの商品タイトルで、Yahoo商品名のAND検索「${data.searchedTitlePhrase || ""}」に一致する掲載は確認できませんでした。商品の不存在を意味するものではありません。`
-        : "Shopee SGの商品タイトル内にJAN文字列が完全一致する掲載は確認できませんでした。商品の不存在を意味するものではありません。";
+      $("shopeePrice").textContent = exactVerified ? "検証済掲載の取得失敗" : (byName ? "商品名一致なし" : "JANタイトル一致なし");
+      $("shopeeSold30d").textContent = exactVerified ? "検証済掲載の取得失敗" : (byName ? "商品名一致なし" : "JANタイトル一致なし");
+      $("shopeeEvidence").textContent = exactVerified
+        ? "JANとShopee掲載画像のバーコード一致を事前確認済みですが、Nexscope APIから現在データを取得できませんでした。"
+        : byName
+          ? `Shopee SGの商品タイトルで、Yahoo商品名のAND検索「${data.searchedTitlePhrase || ""}」に一致する掲載は確認できませんでした。商品の不存在を意味するものではありません。`
+          : "Shopee SGの商品タイトル内にJAN文字列が完全一致する掲載は確認できませんでした。商品の不存在を意味するものではありません。";
       return;
     }
 
     $("shopeePrice").textContent = data.price != null ? `S${Number(data.price).toFixed(2)}` : "取得不能";
     $("shopeeSold30d").textContent = Number.isInteger(data.sold30d) ? Number(data.sold30d).toLocaleString("ja-JP") : "取得不能";
-    $("shopeeEvidence").textContent = data.matchBasis === "YAHOO_TITLE_MULTIWORD_AND"
-      ? `Yahoo商品名のAND検索で ${data.matchCount}件確認。検索語「${data.searchedTitlePhrase || ""}」。表示価格と30日販売数は最安掲載1件の実データです。JAN/GTINでの同一商品確認ではありません。`
-      : `JAN文字列を商品タイトルに完全一致で含む掲載 ${data.matchCount}件確認。表示価格と30日販売数は最安掲載1件の実データです。estimateSoldは不使用。`;
+    $("shopeeEvidence").textContent =
+      data.matchBasis === "VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE"
+        ? `JANとShopee掲載画像のバーコード一致を確認済み。表示価格と30日販売数は検証済みShopee掲載のNexscope実データです。estimateSoldは不使用。`
+        : data.matchBasis === "YAHOO_TITLE_MULTIWORD_AND"
+          ? `Yahoo商品名のAND検索で ${data.matchCount}件確認。検索語「${data.searchedTitlePhrase || ""}」。表示価格と30日販売数は最安掲載1件の実データです。JAN/GTINでの同一商品確認ではありません。`
+          : `JAN文字列を商品タイトルに完全一致で含む掲載 ${data.matchCount}件確認。表示価格と30日販売数は最安掲載1件の実データです。estimateSoldは不使用。`;
   } catch (error) {
     const codeName = String(error?.message || error);
     $("shopeePrice").textContent = "取得不能";
