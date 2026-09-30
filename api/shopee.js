@@ -157,7 +157,15 @@ module.exports = async function handler(req, res) {
         productUrl: verified.productUrl,
         pid: String(verifiedDetail.itemId || verified.pid),
         shopId: String(verifiedDetail.shopId || verified.shopId),
-        detailSource: "NEXSCOPE_SHOPEE_PRODUCT_DETAIL"
+        detailSource: "NEXSCOPE_SHOPEE_PRODUCT_DETAIL",
+        diagnostics: {
+          detailItemId: String(verifiedDetail.itemId || ""),
+          detailShopId: String(verifiedDetail.shopId || ""),
+          searchRequestMode: "SHOP_ID_LIST",
+          searchReturnedProducts: 0,
+          exactListingMatched: false,
+          soldFieldPresent: false
+        }
       });
     }
     return res.status(searchCall.status).json(searchCall.body);
@@ -221,7 +229,15 @@ module.exports = async function handler(req, res) {
         productUrl: verified.productUrl,
         pid: String(verifiedDetail.itemId || verified.pid),
         shopId: String(verifiedDetail.shopId || verified.shopId),
-        detailSource: "NEXSCOPE_SHOPEE_PRODUCT_DETAIL"
+        detailSource: "NEXSCOPE_SHOPEE_PRODUCT_DETAIL",
+        diagnostics: {
+          detailItemId: String(verifiedDetail.itemId || ""),
+          detailShopId: String(verifiedDetail.shopId || ""),
+          searchRequestMode: "SHOP_ID_LIST",
+          searchReturnedProducts: products.length,
+          exactListingMatched: false,
+          soldFieldPresent: false
+        }
       });
     }
     return res.status(200).json({
@@ -235,7 +251,15 @@ module.exports = async function handler(req, res) {
       price: null,
       sold30d: null,
       historicalSold: null,
-      productUrl: ""
+      productUrl: "",
+      diagnostics: {
+        detailItemId: String(verifiedDetail?.itemId || ""),
+        detailShopId: String(verifiedDetail?.shopId || ""),
+        searchRequestMode: useProductName ? "YAHOO_TITLE_MULTIWORD_AND" : "JAN_EXACT_PHRASE",
+        searchReturnedProducts: products.length,
+        exactListingMatched: false,
+        soldFieldPresent: false
+      }
     });
   }
 
@@ -257,6 +281,16 @@ module.exports = async function handler(req, res) {
     historicalSold: cheapest.historicalSold,
     productUrl: cheapest.productUrl,
     pid: cheapest.pid,
-    shopId: cheapest.shopId
+    shopId: cheapest.shopId,
+    diagnostics: {
+      detailItemId: String(verifiedDetail?.itemId || ""),
+      detailShopId: String(verifiedDetail?.shopId || ""),
+      searchRequestMode: verified ? "SHOP_ID_LIST" : (useProductName ? "YAHOO_TITLE_MULTIWORD_AND" : "JAN_EXACT_PHRASE"),
+      searchReturnedProducts: products.length,
+      exactListingMatched: Boolean(verified),
+      matchedSearchPid: String(cheapest.pid || ""),
+      matchedSearchShopId: String(cheapest.shopId || ""),
+      soldFieldPresent: cheapest.sold30d !== null
+    }
   });
 };
