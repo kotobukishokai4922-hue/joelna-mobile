@@ -60,17 +60,13 @@ label input{margin-top:6px;padding:8px;border:1px solid #ccc;border-radius:8px;f
 </details>
 
 <details id="shopeeSettings" style="margin-top:10px">
-  <summary>Shopee SGデータAPI設定</summary>
-  <div class="row">
-    <input id="nexscopeApiKey" type="password" autocomplete="off" placeholder="Nexscope API Keyを貼り付け">
-    <button id="saveNexscope">保存</button>
-  </div>
-  <p id="nexscopeStatus" class="small">30日販売数はNexscopeの実データAPIを使います。推定値 estimateSold は使いません。</p>
+  <summary>Shopee SGデータ接続状況</summary>
+  <p id="nexscopeStatus" class="small">30日販売数はNexscopeの実データAPIを使います。APIキーはVercel側にのみ保存し、ブラウザには保存しません。</p>
   <p class="small"><a href="https://www.nexscope.ai/api-docs" target="_blank" rel="noopener">Nexscope API情報を確認</a></p>
 </details>
 
 <p class="small">バーコード画像は保存しません。カメラ映像からJANを読み取ります。</p>
-<div class="version">v2026.10.01.4</div>
+<div class="version">v2026.10.01.5</div>
 </section>
 
 <section class="card">
