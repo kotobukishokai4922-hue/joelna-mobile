@@ -74,12 +74,12 @@ function cameraErrorMessage(error) {
 }
 
 
-async function fetchShopeeByJan(code) {
+async function fetchShopeeByJan(code, productName = "") {
   if (!validJan(code)) throw new Error("INVALID_JAN");
   const response = await fetch("/api/shopee", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Accept": "application/json" },
-    body: JSON.stringify({ jan: code, apiKey: nexscopeApiKey })
+    body: JSON.stringify({ jan: code, productName, apiKey: nexscopeApiKey })
   });
 
   let data = null;
@@ -90,11 +90,11 @@ async function fetchShopeeByJan(code) {
     throw new Error(reason);
   }
   if (!data || String(data.jan || "") !== code) throw new Error("SHOPEE_JAN_MISMATCH");
-  if (data.matchBasis !== "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE") throw new Error("SHOPEE_MATCH_BASIS_INVALID");
+  if (!["JAN_EXACT_PHRASE_IN_SHOPEE_TITLE","YAHOO_TITLE_MULTIWORD_AND"].includes(data.matchBasis)) throw new Error("SHOPEE_MATCH_BASIS_INVALID");
   return data;
 }
 
-async function showShopee(code) {
+async function showShopee(code, productName = "") {
   $("shopeePrice").textContent = "取得中…";
   $("shopeeSold30d").textContent = "取得中…";
 
@@ -106,19 +106,22 @@ async function showShopee(code) {
   }
 
   try {
-    const data = await fetchShopeeByJan(code);
+    const data = await fetchShopeeByJan(code, productName);
     if (!data.matchCount) {
-      $("shopeePrice").textContent = "JANタイトル一致なし";
-      $("shopeeSold30d").textContent = "JANタイトル一致なし";
-      $("shopeeEvidence").textContent =
-        "Shopee SGの商品タイトル内にJAN文字列が完全一致する掲載は確認できませんでした。商品の不存在を意味するものではありません。";
+      const byName = data.matchBasis === "YAHOO_TITLE_MULTIWORD_AND";
+      $("shopeePrice").textContent = byName ? "商品名一致なし" : "JANタイトル一致なし";
+      $("shopeeSold30d").textContent = byName ? "商品名一致なし" : "JANタイトル一致なし";
+      $("shopeeEvidence").textContent = byName
+        ? `Shopee SGの商品タイトルで、Yahoo商品名のAND検索「${data.searchedTitlePhrase || ""}」に一致する掲載は確認できませんでした。商品の不存在を意味するものではありません。`
+        : "Shopee SGの商品タイトル内にJAN文字列が完全一致する掲載は確認できませんでした。商品の不存在を意味するものではありません。";
       return;
     }
 
-    $("shopeePrice").textContent = data.price != null ? `S$${Number(data.price).toFixed(2)}` : "取得不能";
+    $("shopeePrice").textContent = data.price != null ? `S${Number(data.price).toFixed(2)}` : "取得不能";
     $("shopeeSold30d").textContent = Number.isInteger(data.sold30d) ? Number(data.sold30d).toLocaleString("ja-JP") : "取得不能";
-    $("shopeeEvidence").textContent =
-      `JAN文字列を商品タイトルに完全一致で含む掲載 ${data.matchCount}件確認。表示価格と30日販売数は最安掲載1件の実データです。estimateSoldは不使用。`;
+    $("shopeeEvidence").textContent = data.matchBasis === "YAHOO_TITLE_MULTIWORD_AND"
+      ? `Yahoo商品名のAND検索で ${data.matchCount}件確認。検索語「${data.searchedTitlePhrase || ""}」。表示価格と30日販売数は最安掲載1件の実データです。JAN/GTINでの同一商品確認ではありません。`
+      : `JAN文字列を商品タイトルに完全一致で含む掲載 ${data.matchCount}件確認。表示価格と30日販売数は最安掲載1件の実データです。estimateSoldは不使用。`;
   } catch (error) {
     const codeName = String(error?.message || error);
     $("shopeePrice").textContent = "取得不能";
@@ -128,7 +131,8 @@ async function showShopee(code) {
 }
 
 async function showAllData(code) {
-  await Promise.all([showProduct(code), showShopee(code)]);
+  const product = await showProduct(code);
+  await showShopee(code, product?.name || "");
 }
 
 async function fetchProductByJan(code) {
@@ -163,12 +167,13 @@ async function showProduct(code) {
     if (!product) {
       $("name").innerHTML = "<b>商品：</b>Yahoo!ショッピングで完全一致なし";
       setStatus("JAN読取完了・Yahoo完全一致なし");
-      return;
+      return null;
     }
     $("name").innerHTML = `<b>商品：</b>${escapeHtml(product.name)}`;
     $("jpPrice").textContent = product.price != null ? `¥${Number(product.price).toLocaleString("ja-JP")}` : "取得不能";
     $("jpStock").textContent = product.inStock === true ? "在庫あり" : product.inStock === false ? "在庫なし" : "取得不能";
     setStatus("JAN・Yahoo商品情報取得完了");
+    return product;
   } catch (error) {
     const codeName = String(error?.message || error);
     if (codeName === "YAHOO_CLIENT_ID_NOT_SET") {
@@ -179,6 +184,7 @@ async function showProduct(code) {
       setStatus(`商品情報取得エラー: ${codeName}`);
     }
     $("name").innerHTML = "<b>商品：</b>取得不能";
+    return null;
   }
 }
 
