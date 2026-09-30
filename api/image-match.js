@@ -98,7 +98,7 @@ module.exports = async function handler(req, res) {
   let shopeeCandidate = null;
   let usedAmazonMatch = null;
 
-  for (const match of ranked.slice(0,2)) {
+  for (const match of ranked.slice(0,1)) {
     const title = String(match.title || "").trim();
     const search = await call("shopee-product-search", {
       station:"SG",
