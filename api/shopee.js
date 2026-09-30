@@ -128,16 +128,12 @@ module.exports = async function handler(req, res) {
       verifiedDetail = detailData?.product || null;
     }
 
-    if (verifiedDetail?.name) {
-      payload = {
-        station: "SG",
-        keyword: String(verifiedDetail.name).trim(),
-        keywordType: 1,
-        shopIdList: String(verifiedDetail.shopId || verified.shopId),
-        page: 1,
-        pageSize: 100
-      };
-    }
+    payload = {
+      station: "SG",
+      shopIdList: String(verifiedDetail?.shopId || verified.shopId),
+      page: 1,
+      pageSize: 1000
+    };
   }
 
   const searchCall = await callNexscope("shopee-product-search", payload);
