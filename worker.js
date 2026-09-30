@@ -7,8 +7,8 @@ export default {async fetch(request,env){
  if(request.method!=="GET") return json({error:"METHOD_NOT_ALLOWED"},405);
  const u=new URL(request.url), jan=(u.searchParams.get("jan")||"").trim();
  if(!/^\d{13}$/.test(jan)) return json({error:"INVALID_JAN"},400);
- if(!env.YAHOO_APP_ID) return json({error:"SERVER_NOT_CONFIGURED"},503);
- const y=new URL(YAHOO);y.searchParams.set("appid",env.YAHOO_APP_ID);y.searchParams.set("jan_code",jan);y.searchParams.set("condition","new");y.searchParams.set("results","50");y.searchParams.set("sort","+price");
+ const appid=(u.searchParams.get("appid")||"").trim();\n if(!appid) return json({error:"MISSING_APPID"},400);
+ const y=new URL(YAHOO);y.searchParams.set("appid",appid);y.searchParams.set("jan_code",jan);y.searchParams.set("condition","new");y.searchParams.set("results","50");y.searchParams.set("sort","+price");
  let r;try{r=await fetch(y,{headers:{Accept:"application/json"}})}catch(e){return json({error:"YAHOO_NETWORK_ERROR"},502)}
  if(!r.ok) return json({error:"YAHOO_HTTP_ERROR",status:r.status},502);
  let d;try{d=await r.json()}catch(e){return json({error:"YAHOO_INVALID_JSON"},502)}
