@@ -59,8 +59,18 @@ label input{margin-top:6px;padding:8px;border:1px solid #ccc;border-radius:8px;f
   <p class="small"><a href="https://e.developer.yahoo.co.jp/dashboard/" target="_blank" rel="noopener">Yahoo DeveloperでClient IDを確認</a></p>
 </details>
 
+<details id="shopeeSettings" style="margin-top:10px">
+  <summary>Shopee SGデータAPI設定</summary>
+  <div class="row">
+    <input id="nexscopeApiKey" type="password" autocomplete="off" placeholder="Nexscope API Keyを貼り付け">
+    <button id="saveNexscope">保存</button>
+  </div>
+  <p id="nexscopeStatus" class="small">30日販売数はNexscopeの実データAPIを使います。推定値 estimateSold は使いません。</p>
+  <p class="small"><a href="https://www.nexscope.ai/api-docs" target="_blank" rel="noopener">Nexscope API情報を確認</a></p>
+</details>
+
 <p class="small">バーコード画像は保存しません。カメラ映像からJANを読み取ります。</p>
-<div class="version">v2026.10.01.3</div>
+<div class="version">v2026.10.01.4</div>
 </section>
 
 <section class="card">
@@ -68,15 +78,15 @@ label input{margin-top:6px;padding:8px;border:1px solid #ccc;border-radius:8px;f
 <p class="hold">データ不足・仕入保留</p>
 
 <div class="grid">
-  <div class="m">月間売れ数<b>取得不能</b></div>
+  <div class="m">Shopee SG 30日販売数<b id="shopeeSold30d">取得不能</b></div>
   <div class="m">Yahoo!最安<b id="jpPrice">取得不能</b></div>
   <div class="m">国内在庫<b id="jpStock">取得不能</b></div>
-  <div class="m">Shopee SG相場<b>取得不能</b></div>
+  <div class="m">Shopee SG最安<b id="shopeePrice">取得不能</b></div>
   <div class="m">1個純利益<b id="profit">—</b></div>
   <div class="m">利益率<b id="margin">—</b></div>
 </div>
 
-<p class="small">月間売れ数とShopee SG相場は、実データ取得経路が接続されるまで表示しません。推測値は使いません。</p>
+<p id="shopeeEvidence" class="small">Shopee SGは、JANが商品タイトルに完全一致で含まれる掲載だけを採用します。30日販売数は実データの sold のみ表示し、estimateSold は使いません。</p>
 
 <details>
   <summary>利益計算入力</summary>
