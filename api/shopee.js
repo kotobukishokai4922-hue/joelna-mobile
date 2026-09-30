@@ -15,13 +15,13 @@ module.exports = async function handler(req, res) {
   }
 
   const jan = String(body.jan || "").trim();
-  const apiKey = String(body.apiKey || "").trim();
+  const apiKey = String(process.env.NEXSCOPE_API_KEY || "").trim();
 
   if (!/^\d{13}$/.test(jan)) {
     return res.status(400).json({ error: "INVALID_JAN" });
   }
   if (!apiKey) {
-    return res.status(400).json({ error: "NEXSCOPE_API_KEY_NOT_SET" });
+    return res.status(503).json({ error: "NEXSCOPE_API_KEY_NOT_CONFIGURED" });
   }
 
   const payload = {
