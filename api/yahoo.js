@@ -25,6 +25,7 @@ module.exports = async function handler(req, res) {
   yahooUrl.searchParams.set("jan_code", jan);
   yahooUrl.searchParams.set("condition", "new");
   yahooUrl.searchParams.set("results", "50");
+  yahooUrl.searchParams.set("image_size", "600");
   yahooUrl.searchParams.set("sort", "+price");
 
   const controller = new AbortController();
@@ -70,6 +71,8 @@ module.exports = async function handler(req, res) {
     price: Number.isFinite(Number(hit.price)) ? Number(hit.price) : null,
     inStock: typeof hit.inStock === "boolean" ? hit.inStock : null,
     source: "Yahoo!ショッピング",
-    url: hit.url || ""
+    url: hit.url || "",
+    imageUrl: hit.exImage?.url || hit.image?.medium || hit.image?.small || "",
+    brand: hit.brand?.name || ""
   });
 };
