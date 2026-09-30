@@ -33,7 +33,8 @@ video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;r
 <p class="hold">データ不足・仕入保留</p>
 <div class="grid">
 <div class="m">月間売れ数<b>取得不能</b></div>
-<div class="m">国内最安<b id="jpPrice">取得不能</b></div>\n<div class="m">Shopee SG相場<b>取得不能</b></div>
+<div class="m">国内最安<b id="jpPrice">取得不能</b></div>
+<div class="m">国内在庫<b id="jpStock">取得不能</b></div>\n<div class="m">Shopee SG相場<b>取得不能</b></div>
 <div class="m">1個純利益<b>—</b></div>
 <div class="m">利益率<b>—</b></div>
 </div>
@@ -67,6 +68,7 @@ async function fetchProductByJan(code){
  if(!res.ok) throw new Error("PRODUCT_API_"+res.status);
  const data=await res.json();
  if(String(data.jan||"")!==code) throw new Error("JAN_MISMATCH");
+ if(data.inStock!==undefined && typeof data.inStock!=="boolean") throw new Error("INVALID_STOCK");
  return data.name?data:null;
 }
 async function showProduct(code){
@@ -76,6 +78,7 @@ async function showProduct(code){
   if(!p){$("name").innerHTML="<b>商品：</b>取得不能";$("status").innerHTML="<b>JAN読取完了・商品情報は未接続/取得不能</b>";return}
   $("name").innerHTML="<b>商品：</b>"+escapeHtml(p.name);
   $("jpPrice").textContent=p.price!=null ? "¥"+Number(p.price).toLocaleString("ja-JP") : "取得不能";
+  $("jpStock").textContent=p.inStock===true?"在庫あり":p.inStock===false?"在庫なし":"取得不能";
   $("status").innerHTML="<b>JAN・商品情報取得完了</b>";
  }catch(e){console.error(e);$("name").innerHTML="<b>商品：</b>取得不能";$("status").innerHTML="<b>JAN読取完了・商品情報取得エラー</b>"}
 }
