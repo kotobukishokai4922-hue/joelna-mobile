@@ -9,6 +9,7 @@ let mediaStream = null;
 let zxingControls = null;
 let nativeLoopTimer = null;
 let scanning = false;
+let currentProduct = null;
 
 function validJan(code) {
   return /^\d{13}$/.test(String(code || "").trim());
@@ -25,6 +26,7 @@ function setStatus(message) {
 }
 
 function resetProductView() {
+  currentProduct = null;
   $("name").innerHTML = "<b>商品：</b>未特定";
   $("jpPrice").textContent = "取得不能";
   $("jpStock").textContent = "取得不能";
@@ -32,6 +34,9 @@ function resetProductView() {
   $("shopeeSold30d").textContent = "取得不能";
   $("shopeeLink").hidden = true;
   $("shopeeLink").removeAttribute("href");
+  $("imageMatch").hidden = true;
+  $("imageMatchStatus").hidden = true;
+  $("imageMatchStatus").textContent = "YahooのJAN完全一致商品画像を使い、Nexscopeの画像検索→Shopee SG候補検索を行います。画像由来の候補であり、JAN一致の確定ではありません。";
 }
 
 function stopCamera() {
@@ -209,9 +214,14 @@ async function showProduct(code) {
       setStatus("JAN読取完了・Yahoo完全一致なし");
       return null;
     }
+    currentProduct = product;
     $("name").innerHTML = `<b>商品：</b>${escapeHtml(product.name)}`;
     $("jpPrice").textContent = product.price != null ? `¥${Number(product.price).toLocaleString("ja-JP")}` : "取得不能";
     $("jpStock").textContent = product.inStock === true ? "在庫あり" : product.inStock === false ? "在庫なし" : "取得不能";
+    if (product.imageUrl) {
+      $("imageMatch").hidden = false;
+      $("imageMatchStatus").hidden = false;
+    }
     setStatus("JAN・Yahoo商品情報取得完了");
     return product;
   } catch (error) {
@@ -314,6 +324,81 @@ async function startCamera() {
   }
 }
 
+
+async function runImageMatch() {
+  if (!currentProduct?.imageUrl) {
+    $("imageMatchStatus").hidden = false;
+    $("imageMatchStatus").textContent = "Yahoo商品画像が取得できていないため、画像照合できません。";
+    return;
+  }
+  if (!nexscopeApiKey) {
+    $("imageMatchStatus").hidden = false;
+    $("imageMatchStatus").textContent = "Nexscope API Key未設定のため、画像照合できません。";
+    return;
+  }
+
+  $("imageMatch").disabled = true;
+  $("imageMatchStatus").hidden = false;
+  $("imageMatchStatus").textContent = "画像照合中… Yahoo商品画像から視覚一致候補を探しています。";
+
+  try {
+    const response = await fetch("/api/image-match", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({
+        apiKey: nexscopeApiKey,
+        imageUrl: currentProduct.imageUrl
+      })
+    });
+
+    let data = null;
+    try { data = await response.json(); } catch (_) {}
+
+    if (!response.ok) {
+      const reason = data?.error
+        ? `${data.error}${data.status ? `_${data.status}` : ""}`
+        : `HTTP_${response.status}`;
+      throw new Error(reason);
+    }
+
+    if (!data?.visualMatch) {
+      $("imageMatchStatus").textContent = "画像検索で視覚一致候補を取得できませんでした。";
+      return;
+    }
+
+    if (!data.shopeeCandidate) {
+      const top = data.amazonMatches?.[0]?.title || "取得不能";
+      $("imageMatchStatus").textContent =
+        `画像検索のAmazon最上位候補「${top}」までは取得しましたが、Shopee SG候補は取得できませんでした。`;
+      return;
+    }
+
+    const candidate = data.shopeeCandidate;
+    $("shopeePrice").textContent =
+      candidate.price != null ? `S$${Number(candidate.price).toFixed(2)}` : "取得不能";
+    $("shopeeSold30d").textContent =
+      Number.isInteger(candidate.sold30d)
+        ? Number(candidate.sold30d).toLocaleString("ja-JP")
+        : "取得不能";
+
+    if (candidate.productUrl) {
+      $("shopeeLink").href = candidate.productUrl;
+      $("shopeeLink").hidden = false;
+      $("shopeeLink").textContent = "画像由来Shopee候補を開く";
+    }
+
+    const bridge = data.usedAmazonMatch?.title || "取得不能";
+    $("shopeeEvidence").textContent =
+      `画像照合候補です。YahooのJAN完全一致商品画像 → Nexscope画像検索のAmazon視覚候補「${bridge}」→ Shopee SG検索の順で取得。Shopee候補はJAN一致で確定していません。`;
+    $("imageMatchStatus").textContent =
+      "画像由来のShopee候補を取得しました。候補表示であり、JAN一致の確定ではありません。";
+  } catch (error) {
+    $("imageMatchStatus").textContent = `画像照合エラー: ${String(error?.message || error)}`;
+  } finally {
+    $("imageMatch").disabled = false;
+  }
+}
+
 function numericValue(id) {
   const raw = $(id).value.trim();
   return raw === "" ? null : Number(raw);
@@ -373,6 +458,7 @@ function init() {
   });
 
   $("start").addEventListener("click", startCamera);
+  $("imageMatch").addEventListener("click", runImageMatch);
   $("stop").addEventListener("click", () => {
     stopCamera();
     setStatus("カメラ停止");
