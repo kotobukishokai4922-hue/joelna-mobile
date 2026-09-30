@@ -81,7 +81,7 @@ async function fetchProductByJan(code){
   if(data.inStock!==undefined && typeof data.inStock!=="boolean") throw new Error("INVALID_STOCK");
   return data.name?data:null;
  }
- if(!YAHOO_APP_ID) return null;
+ if(!YAHOO_APP_ID) throw new Error("YAHOO_CLIENT_ID_NOT_SET");
  const url=new URL(YAHOO_ITEM_SEARCH);
  url.searchParams.set("appid",YAHOO_APP_ID);
  url.searchParams.set("jan_code",code);
@@ -107,7 +107,11 @@ async function showProduct(code){
   $("jpPrice").textContent=p.price!=null ? "¥"+Number(p.price).toLocaleString("ja-JP") : "取得不能";
   $("jpStock").textContent=p.inStock===true?"在庫あり":p.inStock===false?"在庫なし":"取得不能";
   $("status").innerHTML="<b>JAN・商品情報取得完了</b>";
- }catch(e){console.error(e);$("name").innerHTML="<b>商品：</b>取得不能";$("status").innerHTML="<b>商品情報取得エラー："+escapeHtml(String(e.message||e))+"</b>"}
+ }catch(e){
+  console.error(e);$("name").innerHTML="<b>商品：</b>取得不能";
+  const m=String(e&&e.message||e);
+  $("status").innerHTML="<b>商品情報取得エラー："+escapeHtml(m==="Failed to fetch"?"BROWSER_DIRECT_API_BLOCKED":m)+"</b>";
+ }
 }
 function num(id){const v=$(id).value.trim();return v===""?null:Number(v)}
 $("domestic").value=String(DEFAULT_DOMESTIC_SHIPPING);
