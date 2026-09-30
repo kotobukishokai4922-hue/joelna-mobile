@@ -33,10 +33,10 @@ video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;r
 <p class="hold">データ不足・仕入保留</p>
 <div class="grid">
 <div class="m">月間売れ数<b>取得不能</b></div>
-<div class="m">国内最安<b id="jpPrice">取得不能</b></div>
+<div class="m">Yahoo!最安<b id="jpPrice">取得不能</b></div>
 <div class="m">国内在庫<b id="jpStock">取得不能</b></div>\n<div class="m">Shopee SG相場<b>取得不能</b></div>
-<div class="m">1個純利益<b>—</b></div>
-<div class="m">利益率<b>—</b></div>
+<div class="m">1個純利益<b id="profit">—</b></div>
+<div class="m">利益率<b id="margin">—</b></div>
 </div>
 <p class="small">月間売れ数は実データ取得時のみ表示します。類似商品の数字や推測値は使いません。</p>
 <details><summary>利益計算入力</summary>
@@ -55,21 +55,39 @@ video{width:100%;height:100%;object-fit:cover}.guide{position:absolute;left:7%;r
 <script type="module">
 import {BrowserMultiFormatReader} from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
 const $=id=>document.getElementById(id);
-const PRODUCT_API_URL = localStorage.getItem("joelnaProductApi") || ""; // Backend: GET ?jan=13digits -> {jan,name,price}
+const PRODUCT_API_URL = localStorage.getItem("joelnaProductApi") || "";
+const YAHOO_APP_ID = localStorage.getItem("joelnaYahooAppId") || "";
+const YAHOO_ITEM_SEARCH = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch";
 const DEFAULT_DOMESTIC_SHIPPING = 800;
 function validJan(code){return /^\\d{13}$/.test(code)}
 function escapeHtml(v){const d=document.createElement("div");d.textContent=String(v);return d.innerHTML}
 async function fetchProductByJan(code){
  if(!validJan(code)) throw new Error("INVALID_JAN");
- // Never fall back to keyword/brand matching: exact JAN only.
- if(!PRODUCT_API_URL) return null;
- const url=new URL(PRODUCT_API_URL,location.href);url.searchParams.set("jan",code);
+ // Exact JAN only. Prefer a private backend when configured; otherwise use Yahoo Shopping itemSearch.
+ if(PRODUCT_API_URL){
+  const url=new URL(PRODUCT_API_URL,location.href);url.searchParams.set("jan",code);
+  const res=await fetch(url,{headers:{"Accept":"application/json"}});
+  if(!res.ok) throw new Error("PRODUCT_API_"+res.status);
+  const data=await res.json();
+  if(String(data.jan||"")!==code) throw new Error("JAN_MISMATCH");
+  if(data.inStock!==undefined && typeof data.inStock!=="boolean") throw new Error("INVALID_STOCK");
+  return data.name?data:null;
+ }
+ if(!YAHOO_APP_ID) return null;
+ const url=new URL(YAHOO_ITEM_SEARCH);
+ url.searchParams.set("appid",YAHOO_APP_ID);
+ url.searchParams.set("jan_code",code);
+ url.searchParams.set("condition","new");
+ url.searchParams.set("sort","+price");
  const res=await fetch(url,{headers:{"Accept":"application/json"}});
- if(!res.ok) throw new Error("PRODUCT_API_"+res.status);
+ if(!res.ok) throw new Error("YAHOO_API_"+res.status);
  const data=await res.json();
- if(String(data.jan||"")!==code) throw new Error("JAN_MISMATCH");
- if(data.inStock!==undefined && typeof data.inStock!=="boolean") throw new Error("INVALID_STOCK");
- return data.name?data:null;
+ const exact=(Array.isArray(data.hits)?data.hits:[]).filter(h=>String(h.janCode||"")===code);
+ if(!exact.length) return null;
+ const stocked=exact.filter(h=>h.inStock===true);
+ const pool=stocked.length?stocked:exact;
+ const hit=pool.reduce((a,b)=>Number(b.price)<Number(a.price)?b:a);
+ return {jan:code,name:hit.name||"",price:Number.isFinite(Number(hit.price))?Number(hit.price):null,inStock:hit.inStock,source:"Yahoo!ショッピング",url:hit.url||""};
 }
 async function showProduct(code){
  $("name").innerHTML="<b>商品：</b>商品情報を取得中…";
