@@ -4,6 +4,7 @@ const DEFAULT_DOMESTIC_SHIPPING = 800;
 const ZXING_URL = "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
 
 let yahooAppId = localStorage.getItem("joelnaYahooAppId") || "";
+let nexscopeApiKey = localStorage.getItem("joelnaNexscopeApiKey") || "";
 let mediaStream = null;
 let zxingControls = null;
 let nativeLoopTimer = null;
@@ -27,6 +28,8 @@ function resetProductView() {
   $("name").innerHTML = "<b>商品：</b>未特定";
   $("jpPrice").textContent = "取得不能";
   $("jpStock").textContent = "取得不能";
+  $("shopeePrice").textContent = "取得不能";
+  $("shopeeSold30d").textContent = "取得不能";
 }
 
 function stopCamera() {
@@ -68,6 +71,65 @@ function cameraErrorMessage(error) {
     return "ブラウザのセキュリティ設定でカメラを使用できません。";
   }
   return `カメラ起動エラー: ${name}`;
+}
+
+
+async function fetchShopeeByJan(code) {
+  if (!validJan(code)) throw new Error("INVALID_JAN");
+  if (!nexscopeApiKey) throw new Error("NEXSCOPE_API_KEY_NOT_SET");
+
+  const response = await fetch("/api/shopee", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    body: JSON.stringify({ jan: code, apiKey: nexscopeApiKey })
+  });
+
+  let data = null;
+  try { data = await response.json(); } catch (_) {}
+
+  if (!response.ok) {
+    const reason = data?.error ? `${data.error}${data.status ? `_${data.status}` : ""}` : `HTTP_${response.status}`;
+    throw new Error(reason);
+  }
+  if (!data || String(data.jan || "") !== code) throw new Error("SHOPEE_JAN_MISMATCH");
+  if (data.matchBasis !== "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE") throw new Error("SHOPEE_MATCH_BASIS_INVALID");
+  return data;
+}
+
+async function showShopee(code) {
+  $("shopeePrice").textContent = "取得中…";
+  $("shopeeSold30d").textContent = "取得中…";
+
+  if (!nexscopeApiKey) {
+    $("shopeePrice").textContent = "API未設定";
+    $("shopeeSold30d").textContent = "API未設定";
+    $("shopeeEvidence").textContent = "Shopee SG実データAPI未設定。推測値は表示しません。";
+    return;
+  }
+
+  try {
+    const data = await fetchShopeeByJan(code);
+    if (!data.matchCount) {
+      $("shopeePrice").textContent = "完全一致なし";
+      $("shopeeSold30d").textContent = "完全一致なし";
+      $("shopeeEvidence").textContent = "Shopee SGで、JANを商品タイトルに完全一致で含む掲載は確認できませんでした。";
+      return;
+    }
+
+    $("shopeePrice").textContent = data.price != null ? `S$${Number(data.price).toFixed(2)}` : "取得不能";
+    $("shopeeSold30d").textContent = Number.isInteger(data.sold30d) ? Number(data.sold30d).toLocaleString("ja-JP") : "取得不能";
+    $("shopeeEvidence").textContent =
+      `JAN完全一致掲載 ${data.matchCount}件確認。表示価格と30日販売数は最安掲載1件の実データです。estimateSoldは不使用。`;
+  } catch (error) {
+    const codeName = String(error?.message || error);
+    $("shopeePrice").textContent = "取得不能";
+    $("shopeeSold30d").textContent = "取得不能";
+    $("shopeeEvidence").textContent = `Shopee SG取得エラー: ${codeName}`;
+  }
+}
+
+async function showAllData(code) {
+  await Promise.all([showProduct(code), showShopee(code)]);
 }
 
 async function fetchProductByJan(code) {
@@ -129,7 +191,7 @@ async function acceptBarcode(rawValue) {
   stopCamera();
   if (navigator.vibrate) navigator.vibrate(120);
   setStatus("JAN読取完了");
-  await showProduct(code);
+  await showAllData(code);
   return true;
 }
 
@@ -215,6 +277,7 @@ function numericValue(id) {
 function init() {
   $("domestic").value = String(DEFAULT_DOMESTIC_SHIPPING);
   $("yahooAppId").value = yahooAppId;
+  $("nexscopeApiKey").value = nexscopeApiKey;
   if (yahooAppId) {
     $("apiStatus").textContent = "Yahoo Client IDはこの端末に保存済みです。";
   } else {
@@ -234,6 +297,21 @@ function init() {
     setStatus("Yahoo Client ID保存完了。スキャンできます。");
   });
 
+  $("saveNexscope").addEventListener("click", () => {
+    const value = $("nexscopeApiKey").value.trim();
+    if (!value) {
+      $("nexscopeStatus").textContent = "Nexscope API Keyを入力してください。";
+      return;
+    }
+    localStorage.setItem("joelnaNexscopeApiKey", value);
+    nexscopeApiKey = value;
+    $("nexscopeStatus").textContent = "保存完了。Shopee SGの実データ取得を利用できます。";
+  });
+
+  if (nexscopeApiKey) {
+    $("nexscopeStatus").textContent = "Nexscope API Keyはこの端末に保存済みです。";
+  }
+
   $("lookup").addEventListener("click", async () => {
     const code = $("manualJan").value.trim();
     $("jan").textContent = `JAN ${code || "—"}`;
@@ -241,7 +319,7 @@ function init() {
       setStatus("JANは13桁で入力してください。");
       return;
     }
-    await showProduct(code);
+    await showAllData(code);
   });
 
   $("manualJan").addEventListener("keydown", (event) => {
