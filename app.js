@@ -30,6 +30,8 @@ function resetProductView() {
   $("jpStock").textContent = "取得不能";
   $("shopeePrice").textContent = "取得不能";
   $("shopeeSold30d").textContent = "取得不能";
+  $("shopeeLink").hidden = true;
+  $("shopeeLink").removeAttribute("href");
 }
 
 function stopCamera() {
@@ -97,6 +99,8 @@ async function fetchShopeeByJan(code, productName = "") {
 async function showShopee(code, productName = "") {
   $("shopeePrice").textContent = "取得中…";
   $("shopeeSold30d").textContent = "取得中…";
+  $("shopeeLink").hidden = true;
+  $("shopeeLink").removeAttribute("href");
 
   if (!nexscopeApiKey) {
     $("shopeePrice").textContent = "API未設定";
@@ -107,27 +111,57 @@ async function showShopee(code, productName = "") {
 
   try {
     const data = await fetchShopeeByJan(code, productName);
+
     if (!data.matchCount) {
       const exactVerified = data.matchBasis === "VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE";
       const byName = data.matchBasis === "YAHOO_TITLE_MULTIWORD_AND";
-      $("shopeePrice").textContent = exactVerified ? "検証済掲載の取得失敗" : (byName ? "商品名一致なし" : "JANタイトル一致なし");
-      $("shopeeSold30d").textContent = exactVerified ? "検証済掲載の取得失敗" : (byName ? "商品名一致なし" : "JANタイトル一致なし");
+
+      $("shopeePrice").textContent = exactVerified
+        ? "検証済掲載の現在値取得不能"
+        : (byName ? "商品名一致なし" : "JANタイトル一致なし");
+      $("shopeeSold30d").textContent = exactVerified
+        ? "30日販売数取得不能"
+        : (byName ? "商品名一致なし" : "JANタイトル一致なし");
+
+      if (data.verifiedProductUrl) {
+        $("shopeeLink").href = data.verifiedProductUrl;
+        $("shopeeLink").hidden = false;
+      }
+
       $("shopeeEvidence").textContent = exactVerified
-        ? "JANとShopee掲載画像のバーコード一致を事前確認済みですが、Nexscope APIから現在データを取得できませんでした。"
+        ? "JANとShopee掲載画像のバーコード一致は確認済みです。ただしNexscope APIから現在値を取得できませんでした。"
         : byName
           ? `Shopee SGの商品タイトルで、Yahoo商品名のAND検索「${data.searchedTitlePhrase || ""}」に一致する掲載は確認できませんでした。商品の不存在を意味するものではありません。`
           : "Shopee SGの商品タイトル内にJAN文字列が完全一致する掲載は確認できませんでした。商品の不存在を意味するものではありません。";
       return;
     }
 
-    $("shopeePrice").textContent = data.price != null ? `S${Number(data.price).toFixed(2)}` : "取得不能";
-    $("shopeeSold30d").textContent = Number.isInteger(data.sold30d) ? Number(data.sold30d).toLocaleString("ja-JP") : "取得不能";
-    $("shopeeEvidence").textContent =
-      data.matchBasis === "VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE"
-        ? `JANとShopee掲載画像のバーコード一致を確認済み。表示価格と30日販売数は検証済みShopee掲載のNexscope実データです。estimateSoldは不使用。`
-        : data.matchBasis === "YAHOO_TITLE_MULTIWORD_AND"
-          ? `Yahoo商品名のAND検索で ${data.matchCount}件確認。検索語「${data.searchedTitlePhrase || ""}」。表示価格と30日販売数は最安掲載1件の実データです。JAN/GTINでの同一商品確認ではありません。`
-          : `JAN文字列を商品タイトルに完全一致で含む掲載 ${data.matchCount}件確認。表示価格と30日販売数は最安掲載1件の実データです。estimateSoldは不使用。`;
+    $("shopeePrice").textContent =
+      data.price != null && Number.isFinite(Number(data.price))
+        ? `S$${Number(data.price).toFixed(2)}`
+        : "取得不能";
+
+    $("shopeeSold30d").textContent =
+      Number.isInteger(data.sold30d)
+        ? Number(data.sold30d).toLocaleString("ja-JP")
+        : "取得不能";
+
+    if (data.verifiedProductUrl) {
+      $("shopeeLink").href = data.verifiedProductUrl;
+      $("shopeeLink").hidden = false;
+    }
+
+    if (data.matchBasis === "VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE") {
+      $("shopeeEvidence").textContent = Number.isInteger(data.sold30d)
+        ? "JANとShopee掲載画像のバーコード一致を確認済み。価格は検証済掲載の現在データ、30日販売数はNexscope Product Searchのsold実データです。estimateSoldは使っていません。"
+        : "JANとShopee掲載画像のバーコード一致を確認済み。価格は検証済掲載の現在データです。30日販売数はNexscope Product Searchで取得できなかったため表示していません。";
+    } else if (data.matchBasis === "YAHOO_TITLE_MULTIWORD_AND") {
+      $("shopeeEvidence").textContent =
+        `Yahoo商品名のAND検索で ${data.matchCount}件確認。検索語「${data.searchedTitlePhrase || ""}」。表示値は候補掲載の実データですが、JAN/GTINで同一商品確認済みではありません。`;
+    } else {
+      $("shopeeEvidence").textContent =
+        `JAN文字列を商品タイトルに完全一致で含む掲載 ${data.matchCount}件確認。表示値はその掲載の実データです。estimateSoldは使っていません。`;
+    }
   } catch (error) {
     const codeName = String(error?.message || error);
     $("shopeePrice").textContent = "取得不能";
