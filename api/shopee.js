@@ -24,10 +24,17 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: "NEXSCOPE_API_KEY_NOT_SET" });
   }
 
+  const productName = String(body.productName || "").trim();
+  const productKeyword = productName
+    .replace(/[×xX]\s*1\s*(袋|個|本|セット)\s*$/u, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const useProductName = productKeyword.length > 0;
   const payload = {
     station: "SG",
-    keyword: jan,
-    keywordType: 1,
+    keyword: useProductName ? productKeyword : jan,
+    keywordType: useProductName ? 2 : 1,
     orderBy: "price",
     orderByType: "ASC",
     page: 1,
@@ -111,9 +118,9 @@ module.exports = async function handler(req, res) {
   if (!sgProducts.length) {
     return res.status(200).json({
       jan,
-      matchBasis: "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE",
+      matchBasis: useProductName ? "YAHOO_TITLE_MULTIWORD_AND" : "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE",
       matchCount: 0,
-      searchedTitlePhrase: jan,
+      searchedTitlePhrase: useProductName ? productKeyword : jan,
       apiProductCount: products.length,
       price: null,
       sold30d: null,
@@ -127,9 +134,9 @@ module.exports = async function handler(req, res) {
 
   return res.status(200).json({
     jan,
-    matchBasis: "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE",
+    matchBasis: useProductName ? "YAHOO_TITLE_MULTIWORD_AND" : "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE",
     matchCount: sgProducts.length,
-    searchedTitlePhrase: jan,
+    searchedTitlePhrase: useProductName ? productKeyword : jan,
     apiProductCount: products.length,
     title: cheapest.title,
     price: cheapest.price,
