@@ -108,16 +108,17 @@ async function showShopee(code) {
   try {
     const data = await fetchShopeeByJan(code);
     if (!data.matchCount) {
-      $("shopeePrice").textContent = "完全一致なし";
-      $("shopeeSold30d").textContent = "完全一致なし";
-      $("shopeeEvidence").textContent = "Shopee SGで、JANを商品タイトルに完全一致で含む掲載は確認できませんでした。";
+      $("shopeePrice").textContent = "JANタイトル一致なし";
+      $("shopeeSold30d").textContent = "JANタイトル一致なし";
+      $("shopeeEvidence").textContent =
+        "Shopee SGの商品タイトル内にJAN文字列が完全一致する掲載は確認できませんでした。商品の不存在を意味するものではありません。";
       return;
     }
 
     $("shopeePrice").textContent = data.price != null ? `S$${Number(data.price).toFixed(2)}` : "取得不能";
     $("shopeeSold30d").textContent = Number.isInteger(data.sold30d) ? Number(data.sold30d).toLocaleString("ja-JP") : "取得不能";
     $("shopeeEvidence").textContent =
-      `JAN完全一致掲載 ${data.matchCount}件確認。表示価格と30日販売数は最安掲載1件の実データです。estimateSoldは不使用。`;
+      `JAN文字列を商品タイトルに完全一致で含む掲載 ${data.matchCount}件確認。表示価格と30日販売数は最安掲載1件の実データです。estimateSoldは不使用。`;
   } catch (error) {
     const codeName = String(error?.message || error);
     $("shopeePrice").textContent = "取得不能";
