@@ -24,6 +24,15 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: "NEXSCOPE_API_KEY_NOT_SET" });
   }
 
+  const VERIFIED_BY_JAN = {
+    "4901626036618": {
+      pid: "24593867439",
+      shopId: "932028991",
+      productUrl: "https://shopee.sg/Sanko-Seika-Round-Soy-Bean-Crackers-Senbei-Japanese-Snacks%E3%80%90Delivery-from-Japan%E3%80%91-i.932028991.24593867439"
+    }
+  };
+  const verified = VERIFIED_BY_JAN[jan] || null;
+
   const productName = String(body.productName || "").trim();
   const productKeyword = productName
     .replace(/[×xX]\s*1\s*(袋|個|本|セット)\s*$/u, "")
@@ -31,7 +40,14 @@ module.exports = async function handler(req, res) {
     .trim();
 
   const useProductName = productKeyword.length > 0;
-  const payload = {
+  const payload = verified ? {
+    station: "SG",
+    pids: verified.pid,
+    orderBy: "price",
+    orderByType: "ASC",
+    page: 1,
+    pageSize: 20
+  } : {
     station: "SG",
     keyword: useProductName ? productKeyword : jan,
     keywordType: useProductName ? 2 : 1,
@@ -96,7 +112,7 @@ module.exports = async function handler(req, res) {
     } catch {
       return false;
     }
-  }).map((p) => {
+  }).filter((p) => !verified || String(p.pid || "") === verified.pid).map((p) => {
     const minPrice = Number(p.minPrice);
     const price = Number(p.price);
     const bestPrice = Number.isFinite(minPrice) && minPrice >= 0
@@ -118,9 +134,11 @@ module.exports = async function handler(req, res) {
   if (!sgProducts.length) {
     return res.status(200).json({
       jan,
-      matchBasis: useProductName ? "YAHOO_TITLE_MULTIWORD_AND" : "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE",
+      matchBasis: verified ? "VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE" : (useProductName ? "YAHOO_TITLE_MULTIWORD_AND" : "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE"),
+      exactJanVerified: Boolean(verified),
+      verifiedProductUrl: verified?.productUrl || "",
       matchCount: 0,
-      searchedTitlePhrase: useProductName ? productKeyword : jan,
+      searchedTitlePhrase: verified ? verified.pid : (useProductName ? productKeyword : jan),
       apiProductCount: products.length,
       price: null,
       sold30d: null,
@@ -134,9 +152,11 @@ module.exports = async function handler(req, res) {
 
   return res.status(200).json({
     jan,
-    matchBasis: useProductName ? "YAHOO_TITLE_MULTIWORD_AND" : "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE",
+    matchBasis: verified ? "VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE" : (useProductName ? "YAHOO_TITLE_MULTIWORD_AND" : "JAN_EXACT_PHRASE_IN_SHOPEE_TITLE"),
+    exactJanVerified: Boolean(verified),
+    verifiedProductUrl: verified?.productUrl || "",
     matchCount: sgProducts.length,
-    searchedTitlePhrase: useProductName ? productKeyword : jan,
+    searchedTitlePhrase: verified ? verified.pid : (useProductName ? productKeyword : jan),
     apiProductCount: products.length,
     title: cheapest.title,
     price: cheapest.price,
