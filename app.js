@@ -35,6 +35,7 @@ function resetProductView() {
   $("shopeeLink").hidden = true;
   $("shopeeLink").removeAttribute("href");
   $("shopeeDiagnostics").textContent = "";
+  $("shopeeDetailSold").textContent = "";
   $("imageMatch").hidden = true;
   $("imageMatchStatus").hidden = true;
   $("imageMatchStatus").textContent = "YahooのJAN完全一致商品画像を使い、Nexscopeの画像検索→Shopee SG候補検索を行います。画像由来の候補であり、JAN一致の確定ではありません。";
@@ -121,6 +122,10 @@ async function showShopee(code, productName = "") {
     const d = data.diagnostics || {};
     $("shopeeDiagnostics").textContent =
       `Nexscope Search返却 ${Number(d.searchReturnedProducts || 0)}件 / 検証済掲載一致 ${d.exactListingMatched ? "あり" : "なし"} / soldフィールド ${d.soldFieldPresent ? "あり" : "なし"}`;
+    $("shopeeDetailSold").textContent =
+      data.detailSold != null
+        ? `Shopee Product Detailのsold: ${Number(data.detailSold).toLocaleString("ja-JP")}（Nexscope公式仕様では期間未定義のため、30日販売数には使用しません）`
+        : "Shopee Product Detailのsold: 取得不能";
 
     if (!data.matchCount) {
       const exactVerified = data.matchBasis === "VERIFIED_SHOPEE_ITEM_BY_JAN_BARCODE";
