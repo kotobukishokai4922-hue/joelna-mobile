@@ -1,0 +1,23 @@
+{
+  "account": "joelna_official",
+  "rules": {
+    "status": "draft=下書き / scheduled=予約（approved:true の時だけ公開） / published=公開済 / error=失敗",
+    "scheduledAt": "日本時間で記入 例 2026-11-20T19:00:00+09:00",
+    "media": "instagram/media/ に置いたファイル名。画像はJPEGのみ、リールはMP4"
+  },
+  "posts": [
+    {
+      "id": "001-joe-intro-reel",
+      "type": "REELS",
+      "status": "draft",
+      "approved": false,
+      "scheduledAt": null,
+      "media": ["JOELNA_Joe_synced.mp4"],
+      "cover": "JOELNA_Joe_front_cover.jpg",
+      "share_to_feed": true,
+      "uses_voicevox": true,
+      "caption": "こんにちは！ジョーエレナのジョーです🐱\n石川県小松市で、行き場を失った商品を中心に、お買い得な商品をお届けするお店だよ。\n食品・日用品・化粧品・ペット用品を取り扱い中。ケース単位のご購入もできるので、町内会や子ども会のイベントにもぜひ！\nご予算・数量に合わせたご提案もできるから、気軽にDMしてね。\n📍石川県小松市｜実店舗は準備中\n🛒オンラインショップはプロフィールのリンクから\n音声：VOICEVOX:ずんだもん\n#石川県 #小松市 #JOELNA #お得情報 #まとめ買い",
+      "note": "合格版ジョー動画。素材（ChatGPT Library: JOELNA_Joe_revised_package.zip）を instagram/media/ に配置後、表紙PNGをJPEGに変換して scheduled にする"
+    }
+  ]
+}
