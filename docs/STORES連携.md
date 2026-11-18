@@ -78,6 +78,13 @@
 ## 8. 現状（2026-11-18時点）
 - [x] 公式API仕様の調査
 - [x] 操作ツール作成・モックサーバーで動作検証（ページ送り・在庫更新・エラー表示）
-- [ ] クラウド環境で `api.stores.dev` の通信許可（現状はプロキシで 403 遮断を確認済み）
+- [x] クラウド環境「joelna-mobile」（個人用）を作成し `api.stores.dev` を許可。本番APIへの到達を確認（認証なしで 401 Unauthorized ＝正常）
 - [ ] 社長: 開発パートナー登録・クレデンシャル取得
-- [ ] クレデンシャル保存 → `node tools/stores.mjs store` で本番接続確認
+- [ ] クレデンシャルを環境「joelna-mobile」のネットワークシークレット（ホスト api.stores.dev）に保存 → 本番接続確認
+
+## 9. 実行方法（クラウド環境）
+Node 組み込み fetch はプロキシ設定を自動で読まないため、以下の形で実行する。
+```sh
+NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt node tools/stores.mjs store
+```
+今後 STORES を操作するセッションは、環境「joelna-mobile」を選んで開始すること（Default 環境では api.stores.dev が遮断される）。
