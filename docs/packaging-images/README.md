@@ -8,7 +8,7 @@
 | 項目 | 状況 |
 |---|---|
 | 添付ロゴ | チャットには届かなかった。Googleドライブの `JOELNA_ロゴ_丸_正式版.png`（2026-11-21作成）を使用 |
-| 添付商品写真 | チャットには届かなかった。どの商品かが分からないため、まだ使っていない |
+| 商品写真 | 社長の指示「みつくろえ」により、ドライブの出品画像から **3010（ピアス）** と **1001（ネックレス）** を選定（理由は2-2） |
 | 画像・動画の生成 | この作業環境には、写真のような画像や動画を作る機能がない。下の指示文を画像生成AI・動画生成AIに入れて作る |
 | このフォルダで作ったもの | `joelna_logo_sticker_round.png`：ロゴを丸く切り抜き、外側を透明にしたシール用画像（1212×1212px） |
 
@@ -22,10 +22,29 @@
 | ハート（くすみピンクベージュ） | #D2997A | 差し色（入れすぎない） |
 | 耳（淡いベージュ） | #EFCBAA | 包み紙・やわらかい影 |
 
+## 2-2. 選んだ商品と理由
+
+番号の付け方：ドライブ「出品画像（完成版）商品番号別」では、1000番台がネックレス、3000番台がピアス（写真で確認）。
+
+| 役 | 商品番号 | 内容（出品画像の表記） | 選んだ理由 |
+|---|---|---|---|
+| ピアス | 3010 | ゴールドカラー／縦約2.5cm／花の形に透明の石 | 金色がロゴのクリーム・茶と合う。小さいので小箱・小袋に自然に収まる。石が光り、高級感が出る |
+| ネックレス | 1001 | ステンレス／約39〜44cm／金色の月と星、透明の石 | ピアスと同じ金色で統一できる。月と星の形が上から撮っても分かりやすい |
+
+生成AIに入れる参考画像（元の出品画像から、文字・タグ・JOELNAの帯を除いて商品だけ切り出したもの）：
+- `ref_3010_earrings_gold_flower.jpg`
+- `ref_1001_necklace_gold_moon_star.jpg`
+
+元の出品画像を入れると、写真の中の文字やタグをAIが真似て描くことがあるため、必ず切り出した画像を使う。
+
+### 崩れてはいけない点（できた画像はここを確認する）
+- 3010：金色の枠。上は細長い透明の石が花びらのように並び、中心に小さな丸い石がある。下に細長い石が葉のように連なる。石の数と並び方は元の写真と同じにする。裏に透明の丸いキャッチがある
+- 1001：金色の細いあずきチェーン。開いた三日月の形で、下側に透明の丸い石が一列に並ぶ。月の内側に、小さな石を敷きつめた星が短いチェーンで下がる
+
 ## 3. 作り方（共通の手順）
 
 1. 画像生成AIのうち、**写真を添付して編集・合成できるもの**を使う。生成するときは次の3つを添付する。
-   - 商品写真（ピアス・ネックレス）
+   - 商品写真：1〜2枚目は `ref_3010_earrings_gold_flower.jpg`、3枚目は `ref_1001_necklace_gold_moon_star.jpg`
    - `joelna_logo_sticker_round.png`（4枚目のみ）
    - 前に作った画像（2枚目以降。手・机・箱の見た目を揃えるため）
 2. 縦横比は **9:16**（例：1080×1920px）を指定する。
@@ -44,7 +63,9 @@ Vertical 9:16 photo, top-down flat lay (camera directly overhead), luxury minima
 A light cream linen cloth on a warm light-wood desk. Soft natural window daylight from the left, bright, gentle soft shadows, high-end editorial product photography, sharp focus, realistic skin texture.
 Only a young woman's hands and forearms are visible, entering from the bottom of the frame. Short natural nails with sheer nude polish. Cream knit sweater sleeves.
 Color palette: cream #FBF2E7, beige #EFCBAA, warm tan #B58865, dusty rose-beige #D2997A, deep brown #553221 accents.
-Use the attached accessory photo exactly as it is: keep its shape, color, size, and details unchanged.
+Use the attached accessory photos exactly as they are: keep shape, color, size, stone count and details unchanged.
+Earrings (product 3010): small gold-tone stud earrings, about 2.5 cm tall, marquise-cut clear crystals arranged like a flower with a small round center stone, with a leaf-like cluster of marquise crystals below, clear round backings.
+Necklace (product 1001): thin gold cable chain with an open crescent-moon pendant set with a row of small round clear stones, and a small pave star hanging inside the crescent.
 Calm, clean, elegant, not cheap, not cluttered.
 ```
 
@@ -94,6 +115,6 @@ The cream gift box is closed. A round sticker with the attached JOELNA logo is p
 
 ## 6. 残っていること
 
-- [ ] 使う商品写真（ピアス1点・ネックレス1点）を決める。商品番号を教えてもらえれば、ドライブから探して形と色を確認する
+- [x] 使う商品を決める → 3010（ピアス）・1001（ネックレス）。参考画像を切り出し済み（2026-11-22）
 - [ ] 画像4枚を生成し、商品の形・ロゴの文字が崩れていないか確認する
 - [ ] 画像から5秒動画4本を生成する
