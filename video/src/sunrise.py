@@ -142,8 +142,6 @@ for f in range(N):
                  (255, 255, 255), (40, 90, 160))
     fr = text_fx(fr, "JOELNA", f_brand, 1700, seg(sec, 11.5, 13.0), seg(sec, 11.5, 13.0),
                  (255, 240, 200), (150, 70, 0))
-    fr = text_fx(fr, "合同会社寿商会", f_small, 1795, seg(sec, 12.2, 13.5), 1,
-                 (255, 255, 255), (60, 60, 90))
     # fade in/out
     fade = min(seg(sec, 0, 0.8), 1 - seg(sec, 14.3, 15.0))
     out = (np.asarray(fr.convert("RGB")).astype(np.float32) * fade).astype(np.uint8)
