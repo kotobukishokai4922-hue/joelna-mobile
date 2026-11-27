@@ -20,7 +20,6 @@ DAY = [(70, 140, 220), (150, 200, 240), (255, 225, 170)]
 
 ys = np.linspace(0, 1, HOR)[:, None]
 def sky(t):
-    p = NIGHT if False else None
     a = seg(t, 0.0, 0.45); b = seg(t, 0.40, 0.85)
     cols = [mix(mix(NIGHT[i], DAWN[i], a), DAY[i], b) for i in range(3)]
     top, mid, hz = cols
@@ -30,41 +29,74 @@ def sky(t):
 
 rng = np.random.default_rng(3)
 stars = [(rng.integers(0, W), rng.integers(0, int(HOR * 0.7)), rng.uniform(1, 3)) for _ in range(120)]
-f_logo = ImageFont.truetype(LOGO, 72)
 f_big = ImageFont.truetype(JP, 96)
 f_mid = ImageFont.truetype(JP, 68)
 f_brand = ImageFont.truetype(LOGO, 120)
 f_small = ImageFont.truetype(JP, 40)
 
-R = 190
-def sun_layer(cx, cy, rot, glow):
+R = 215
+import os
+_LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "JOELNA_logo_round_official.png")
+def _load_logo():
+    im = Image.open(_LOGO_PATH).convert("RGBA")
+    cx0, cy0, r0 = 620, 622, 607          # measured outer edge of the brown ring
+    im = im.crop((cx0 - r0, cy0 - r0, cx0 + r0, cy0 + r0)).resize((2 * R, 2 * R), Image.LANCZOS)
+    m = Image.new("L", (8 * R, 8 * R), 0); ImageDraw.Draw(m).ellipse([0, 0, 8 * R - 1, 8 * R - 1], fill=255)
+    im.putalpha(m.resize((2 * R, 2 * R), Image.LANCZOS))
+    return im
+LOGO_IMG = _load_logo()
+
+# bright glow (radial, precomputed) and long light beams
+GS = 1500
+yy, xx = np.mgrid[0:GS, 0:GS]; rr = np.hypot(xx - GS / 2, yy - GS / 2)
+GLOW = np.zeros((GS, GS, 4), np.uint8)
+inten = np.clip(np.exp(-((rr - R) .clip(0)) / 120) * 0.95 + np.exp(-rr / 420) * 0.55, 0, 1)
+inten = inten * np.clip(1 - rr / 745, 0, 1) ** 1.2
+GLOW[..., 0] = 255; GLOW[..., 1] = (215 + 35 * np.exp(-rr / 300)).astype(np.uint8); GLOW[..., 2] = (120 + 120 * np.exp(-rr / 260)).astype(np.uint8)
+GLOW[..., 3] = (255 * inten).astype(np.uint8)
+GLOW_IMG = Image.fromarray(GLOW, "RGBA")
+BEAM = Image.new("RGBA", (GS, GS), (0, 0, 0, 0)); bd_ = ImageDraw.Draw(BEAM)
+for k in range(12):
+    ang = k * math.pi / 6; wd = 0.10 if k % 2 else 0.06
+    pts = [(GS / 2, GS / 2), (GS / 2 + 760 * math.cos(ang - wd), GS / 2 + 760 * math.sin(ang - wd)),
+           (GS / 2 + 760 * math.cos(ang + wd), GS / 2 + 760 * math.sin(ang + wd))]
+    bd_.polygon(pts, fill=(255, 240, 190, 70))
+BEAM = BEAM.filter(ImageFilter.GaussianBlur(18))
+bm = np.asarray(BEAM).copy(); bm[..., 3] = (bm[..., 3] * np.clip(1 - rr / 750, 0, 1)).astype(np.uint8)
+BEAM = Image.fromarray(bm, "RGBA")
+
+def sun_layer(cx, cy, rot, glow, sec=0):
     L = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    # glow
-    G = Image.new("RGBA", (W, H), (0, 0, 0, 0)); gd = ImageDraw.Draw(G)
-    for i in range(10, 0, -1):
-        r = R + i * 45
-        gd.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(255, 200, 90, int(18 * glow)))
-    L = Image.alpha_composite(L, G.filter(ImageFilter.GaussianBlur(30)))
+    pulse = 0.9 + 0.1 * math.sin(sec * 2.2)
+    g = GLOW_IMG.copy(); g.putalpha(g.getchannel("A").point(lambda v: int(v * min(1, glow * pulse))))
+    L = _place(g, cx, cy)
+    b = BEAM.rotate(math.degrees(rot) * 0.5, resample=Image.BILINEAR)
+    b.putalpha(b.getchannel("A").point(lambda v: int(v * glow)))
+    L = Image.alpha_composite(L, _place(b, cx, cy))
     d = ImageDraw.Draw(L)
-    # rays
+    # sharp rays, bright yellow-white
     for k in range(16):
         ang = rot + k * math.pi / 8
-        r1, r2, wd = R + 25, R + 95 + (25 if k % 2 else 0), 0.07
+        r1, r2, wd = R + 22, R + 105 + (30 if k % 2 else 0) + 10 * math.sin(sec * 3 + k), 0.075
         pts = [(cx + r1 * math.cos(ang - wd), cy + r1 * math.sin(ang - wd)),
                (cx + r2 * math.cos(ang), cy + r2 * math.sin(ang)),
                (cx + r1 * math.cos(ang + wd), cy + r1 * math.sin(ang + wd))]
-        d.polygon(pts, fill=(255, 190, 60, 230))
-    # disc with radial gradient
-    for i in range(R, 0, -2):
-        t = i / R
-        c = tuple(int(v) for v in mix((255, 245, 200), (255, 150, 30), t ** 1.6))
-        d.ellipse([cx - i, cy - i, cx + i, cy + i], fill=c + (255,))
-    d.ellipse([cx - R, cy - R, cx + R, cy + R], outline=(255, 255, 255, 200), width=5)
-    d.ellipse([cx - R + 18, cy - R + 18, cx + R - 18, cy + R - 18], outline=(190, 90, 0, 160), width=3)
-    # logo text
-    d.text((cx, cy), "JOELNA", font=f_logo, anchor="mm", fill=(120, 50, 0, 255),
-           stroke_width=2, stroke_fill=(255, 240, 210, 255))
+        d.polygon(pts, fill=(255, 225, 90, 255))
+    # gold ring
+    for i, c in enumerate([(255, 170, 30), (255, 200, 60), (255, 235, 140), (255, 250, 220)]):
+        rr_ = R + 18 - i * 4
+        d.ellipse([cx - rr_, cy - rr_, cx + rr_, cy + rr_], fill=c + (255,))
+    L.alpha_composite(LOGO_IMG, (int(cx - R), int(cy - R)))
+    # soft warm shine over the logo
+    sh = Image.new("RGBA", (2 * R, 2 * R), (0, 0, 0, 0)); sd = ImageDraw.Draw(sh)
+    sd.ellipse([0, 0, 2 * R - 1, 2 * R - 1], fill=(255, 230, 150, int(35 * glow)))
+    sd.ellipse([R * 0.35, R * 0.2, R * 0.95, R * 0.6], fill=(255, 255, 255, int(70 * glow)))
+    sh = sh.filter(ImageFilter.GaussianBlur(25)); sh.putalpha(Image.composite(sh.getchannel("A"), Image.new("L", sh.size, 0), LOGO_IMG.getchannel("A")))
+    L.alpha_composite(sh, (int(cx - R), int(cy - R)))
     return L
+
+def _place(layer, cx, cy):
+    C = Image.new("RGBA", (W, H), (0, 0, 0, 0)); C.paste(layer, (int(cx - GS / 2), int(cy - GS / 2))); return C
 
 def swallow(d, x, y, s, flap, col):
     w = s * (0.6 + 0.4 * flap)
@@ -107,7 +139,7 @@ for f in range(N):
     p = seg(sec, 0.5, 8.0)
     cy = lerp(HOR + R + 120, HOR * 0.36, p)
     cx = W // 2
-    sun = sun_layer(cx, int(cy), sec * 0.35, 0.4 + 0.6 * p)
+    sun = sun_layer(cx, int(cy), sec * 0.35, 0.5 + 0.5 * p, sec)
     # clip sun at horizon
     mask = Image.new("L", (W, H), 0); ImageDraw.Draw(mask).rectangle([0, 0, W, HOR], fill=255)
     sun.putalpha(Image.composite(sun.getchannel("A"), Image.new("L", (W, H), 0), mask))
@@ -121,7 +153,7 @@ for f in range(N):
             ww = (170 - i * 5) * (0.8 + 0.2 * math.sin(sec * 4 + i * 1.3))
             off = 12 * math.sin(sec * 2.5 + i)
             rd.rounded_rectangle([cx - ww + off, yy, cx + ww + off, yy + 8], 4,
-                                 fill=(255, 210, 120, int(170 * strength * (1 - i / 28))))
+                                 fill=(255, 230, 150, int(220 * strength * (1 - i / 28))))
         fr = Image.alpha_composite(fr, Rf.filter(ImageFilter.GaussianBlur(2)))
     # horizon line shine
     d = ImageDraw.Draw(fr)
